@@ -12,7 +12,7 @@ npm install react-native-pubky
 
 1. Clone & npm install:
 ```sh
-git clone git clone git@github.com:pubky/react-native-pubky.git && cd react-native-pubky && npm i
+git clone git@github.com:pubky/react-native-pubky.git && cd react-native-pubky && npm i
 ```
 2. Delete the `rust/pubky` directory to prevent a memory error (This step will be removed once pubky is public).
 3. Yarn add it to your project:
