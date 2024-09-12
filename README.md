@@ -8,6 +8,18 @@ React Native implementation of [pubky](https://github.com/pubky/pubky)
 npm install react-native-pubky
 ```
 
+## Local Installation
+
+1. Clone & npm install:
+```sh
+git clone git clone git@github.com:pubky/react-native-pubky.git && cd react-native-pubky && npm i
+```
+2. Delete the `rust/pubky` directory to prevent a memory error (This step will be removed once pubky is public).
+3. Yarn add it to your project:
+```sh
+yarn add path/to/react-native-pubky
+```
+
 ## Usage
 
 ```js

@@ -45,9 +45,10 @@
     "prepare": "bob build",
     "release": "release-it",
     "reinstall": "npm i && npm run clean && npm run prepare",
-    "update-bindings:ios": "node setup-ios-bindings.js && npm run reinstall",
-    "update-bindings:android": "node setup-android-bindings.js && npm i && npm run clean && npm run prepare",
-    "update-bindings": "npm run update-bindings:ios && npm run update-bindings:android"
+    "cargo-build": "cd rust && cargo build --release && cd pubky && cargo build --release && cd pubky && cargo build --release && cd ../ && cd pubky-common && cargo build --release && cd ../ && cd pubky-homeserver && cargo build --release && cd ../../../",
+    "update-bindings:ios": "npm run cargo-build && node setup-ios-bindings.js && npm run reinstall",
+    "update-bindings:android": "npm run cargo-build && node setup-android-bindings.js && npm run reinstall",
+    "update-bindings": "npm run cargo-build && npm run update-bindings:ios && npm run update-bindings:android"
   },
   "keywords": [
     "pubky",
