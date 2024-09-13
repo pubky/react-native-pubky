@@ -5,7 +5,7 @@ React Native implementation of [pubky](https://github.com/pubky/pubky)
 ## Installation
 
 ```sh
-npm install react-native-pubky
+npm install @synonymdev/react-native-pubky
 ```
 
 ## Local Installation
@@ -23,7 +23,7 @@ yarn add path/to/react-native-pubky
 ## Usage
 
 ```js
-import { auth } from 'react-native-pubky';
+import { auth } from '@synonymdev/react-native-pubky';
 
 const authRes = await auth("pubkyAuthUrl", "secretKey");
 if (authRes.isErr()) {

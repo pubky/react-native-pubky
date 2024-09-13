@@ -1,5 +1,5 @@
 {
-  "name": "react-native-pubky",
+  "name": "@synonymdev/react-native-pubky",
   "version": "0.1.0",
   "description": "React Native Implementation of Pubky",
   "source": "./src/index.tsx",
@@ -67,6 +67,7 @@
   },
   "homepage": "https://github.com/pubky/react-native-pubky#readme",
   "publishConfig": {
+    "access": "restricted",
     "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {

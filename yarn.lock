@@ -5992,7 +5992,7 @@ react-native-builder-bob@^0.30.2:
     which "^2.0.2"
     yargs "^17.5.1"
 
-"react-native-pubky-example@file:/Users/coreyphillips/Desktop/reat-native-pubky/quick/react-native-pubky/example":
+"react-native-pubky-example@file:/Users/coreyphillips/Desktop/reat-native-pubky/npm-publish/react-native-pubky/example":
   version "0.0.1"
   resolved "file:example"
   dependencies:
