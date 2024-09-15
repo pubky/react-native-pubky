@@ -8,6 +8,30 @@ React Native implementation of [pubky](https://github.com/pubky/pubky)
 npm install @synonymdev/react-native-pubky
 ```
 
+## Implementation Status
+### Implemented Methods
+- [x] [auth](#auth): Authentication functionality.
+### Methods to be Implemented
+- [ ] parseAuthUrl: Method to decode an authUrl.
+- [ ] publish: Functionality to publish content.
+- [ ] resolve: Functionality to resolve content.
+- [ ] signIn: Functionality to sign in.
+- [ ] signUp: Functionality to sign up.
+
+
+## Usage
+### <a name="auth"></a>Auth
+```js
+import { auth } from '@synonymdev/react-native-pubky';
+
+const authRes = await auth("pubkyAuthUrl", "secretKey");
+if (authRes.isErr()) {
+  console.log(authRes.error.message);
+  return;
+}
+console.log(authRes.value);
+```
+
 ## Local Installation
 
 1. Clone & npm install:
@@ -18,19 +42,6 @@ git clone git@github.com:pubky/react-native-pubky.git && cd react-native-pubky &
 3. Yarn add it to your project:
 ```sh
 yarn add path/to/react-native-pubky
-```
-
-## Usage
-
-```js
-import { auth } from '@synonymdev/react-native-pubky';
-
-const authRes = await auth("pubkyAuthUrl", "secretKey");
-if (authRes.isErr()) {
-  console.log(authRes.error.message);
-  return;
-}
-console.log(authRes.value);
 ```
 
 ## Update Bindings

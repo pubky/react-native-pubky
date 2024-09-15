@@ -9,7 +9,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import uniffi.mobile.auth
+import uniffi.pubkymobile.auth
 
 class PubkyModule(reactContext: ReactApplicationContext) :
   ReactContextBaseJavaModule(reactContext) {
@@ -18,24 +18,24 @@ class PubkyModule(reactContext: ReactApplicationContext) :
     return NAME
   }
 
-@ReactMethod
-fun auth(url: String, secretKey: String, promise: Promise) {
-    CoroutineScope(Dispatchers.IO).launch {
-        try {
-            val result = auth(url, secretKey)
-            val array = Arguments.createArray().apply {
-                result.forEach { pushString(it) }
-            }
-            withContext(Dispatchers.Main) {
-                promise.resolve(array)
-            }
-        } catch (e: Exception) {
-            withContext(Dispatchers.Main) {
-                promise.reject("Error", e.message)
-            }
-        }
-    }
-}
+  @ReactMethod
+  fun auth(url: String, secretKey: String, promise: Promise) {
+      CoroutineScope(Dispatchers.IO).launch {
+          try {
+              val result = auth(url, secretKey)
+              val array = Arguments.createArray().apply {
+                  result.forEach { pushString(it) }
+              }
+              withContext(Dispatchers.Main) {
+                  promise.resolve(array)
+              }
+          } catch (e: Exception) {
+              withContext(Dispatchers.Main) {
+                  promise.reject("Error", e.message)
+              }
+          }
+      }
+  }
 
   companion object {
     const val NAME = "Pubky"
