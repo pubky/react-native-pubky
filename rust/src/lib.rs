@@ -1,7 +1,7 @@
 uniffi::setup_scaffolding!();
-
-use url::Url;
 use pubky::PubkyClient;
+use hex;
+use url::Url;
 
 #[uniffi::export]
 async fn auth(url: String, secret_key: String) -> Vec<String> {

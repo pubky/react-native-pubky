@@ -7,7 +7,6 @@ RCT_EXTERN_METHOD(auth:(NSString *)url
                   withResolver:(RCTPromiseResolveBlock)resolve
                   withRejecter:(RCTPromiseRejectBlock)reject)
 
-
 + (BOOL)requiresMainQueueSetup
 {
   return NO;

@@ -6,21 +6,20 @@ edition = "2021"
 
 [lib]
 crate_type = ["cdylib", "staticlib"]
-name = "mobile"
+name = "pubkymobile"
+
+[net]
+git-fetch-with-cli = true
 
 [dependencies]
 uniffi = { version = "0.25.3", features = [ "cli" ] }
-bitcoin = "0.31.1"
-bip39 = "2.0.0"
-secp256k1 = "0.28.2"
-bip32 = "0.5.1"
 serde_json = "1.0.114"
 hex = "0.4.3"
 sha2 = "0.10.8"
 serde = { version = "^1.0.209", features = ["derive"] }
+tokio = "1.40.0"
+url = "2.5.2"
 pkarr = { git = "https://github.com/Pubky/pkarr", branch = "v3", package = "pkarr", features = ["async", "rand"] }
 pubky = { version = "0.1.0", path = "pubky/pubky" }
 pubky-common = { version = "0.1.0", path = "pubky/pubky-common" }
 pubky_homeserver = { version = "0.1.0", path = "pubky/pubky-homeserver" }
-tokio = "1.40.0"
-url = "2.5.2"

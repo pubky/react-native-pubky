@@ -21,54 +21,56 @@ const setupIosCommand = `
   export IPHONEOS_DEPLOYMENT_TARGET=13.4
   sed -i '' 's/crate_type = .*/crate_type = ["cdylib", "staticlib"]/' Cargo.toml && \\
   cargo build --release && \\
-  cargo run --bin uniffi-bindgen generate --library ./target/release/libmobile.dylib --language swift --out-dir ./bindings && \\
+  cargo run --bin uniffi-bindgen generate --library ./target/release/libpubkymobile.dylib --language swift --out-dir ./bindings && \\
   rustup target add aarch64-apple-ios-sim aarch64-apple-ios && \\
   cargo build --release --target=aarch64-apple-ios-sim && \\
   cargo build --release --target=aarch64-apple-ios && \\
-  mv bindings/mobileFFI.modulemap bindings/module.modulemap && \\
-  xcodebuild -create-xcframework -library ./target/aarch64-apple-ios-sim/release/libmobile.a -headers ./bindings -library ./target/aarch64-apple-ios/release/libmobile.a -headers ./bindings -output "ios/Mobile.xcframework"
+  mv bindings/pubkymobileFFI.modulemap bindings/module.modulemap && \\
+  xcodebuild -create-xcframework -library ./target/aarch64-apple-ios-sim/release/libpubkymobile.a -headers ./bindings -library ./target/aarch64-apple-ios/release/libpubkymobile.a -headers ./bindings -output "ios/PubkyMobile.xcframework"
 `;
 
 const originalDir = process.cwd();
 
 const postSetupIos = async () => {
-  const rustBindingsMobileSwift = path.resolve(
+  const rustBindingsPubkyMobileSwift = path.resolve(
     'rust',
     'bindings',
-    'mobile.swift'
+    'pubkymobile.swift'
   );
-  const iosMobileSwift = path.resolve('ios', 'mobile.swift');
+  const iosPubkyMobileSwift = path.resolve('ios', 'pubkymobile.swift');
 
-  // Copy rust/bindings/mobile.swift file to ios/ directory
-  await fs.promises.copyFile(rustBindingsMobileSwift, iosMobileSwift);
-  console.log(`Copied ${rustBindingsMobileSwift} to ${iosMobileSwift}`);
+  // Copy rust/bindings/pubkymobile.swift file to ios/ directory
+  await fs.promises.copyFile(rustBindingsPubkyMobileSwift, iosPubkyMobileSwift);
+  console.log(
+    `Copied ${rustBindingsPubkyMobileSwift} to ${iosPubkyMobileSwift}`
+  );
 
-  // Delete rust/ios/Mobile.xcframework/ios-arm64/Headers/mobile.swift
-  const iosArm64HeadersMobileSwift = path.resolve(
+  // Delete rust/ios/PubkyMobile.xcframework/ios-arm64/Headers/pubkymobile.swift
+  const iosArm64HeadersPubkyMobileSwift = path.resolve(
     'rust',
     'ios',
-    'Mobile.xcframework',
+    'PubkyMobile.xcframework',
     'ios-arm64',
     'Headers',
-    'mobile.swift'
+    'pubkymobile.swift'
   );
-  if (fs.existsSync(iosArm64HeadersMobileSwift)) {
-    await fs.promises.unlink(iosArm64HeadersMobileSwift);
-    console.log(`Deleted ${iosArm64HeadersMobileSwift}`);
+  if (fs.existsSync(iosArm64HeadersPubkyMobileSwift)) {
+    await fs.promises.unlink(iosArm64HeadersPubkyMobileSwift);
+    console.log(`Deleted ${iosArm64HeadersPubkyMobileSwift}`);
   }
 
-  // Delete rust/ios/Mobile.xcframework/ios-arm64-simulator/Headers/mobile.swift
-  const iosArm64SimulatorHeadersMobileSwift = path.resolve(
+  // Delete rust/ios/PubkyMobile.xcframework/ios-arm64-simulator/Headers/pubkymobile.swift
+  const iosArm64SimulatorHeadersPubkyMobileSwift = path.resolve(
     'rust',
     'ios',
-    'Mobile.xcframework',
+    'PubkyMobile.xcframework',
     'ios-arm64-simulator',
     'Headers',
-    'mobile.swift'
+    'pubkymobile.swift'
   );
-  if (fs.existsSync(iosArm64SimulatorHeadersMobileSwift)) {
-    await fs.promises.unlink(iosArm64SimulatorHeadersMobileSwift);
-    console.log(`Deleted ${iosArm64SimulatorHeadersMobileSwift}`);
+  if (fs.existsSync(iosArm64SimulatorHeadersPubkyMobileSwift)) {
+    await fs.promises.unlink(iosArm64SimulatorHeadersPubkyMobileSwift);
+    console.log(`Deleted ${iosArm64SimulatorHeadersPubkyMobileSwift}`);
   }
 
   const rustIos = path.resolve('rust', 'ios');

@@ -2,7 +2,7 @@
   "compilerOptions": {
     "rootDir": ".",
     "paths": {
-      "react-native-pubky": ["./src/index"]
+      "@synonymdev/react-native-pubky": ["./src/index"]
     },
     "allowUnreachableCode": false,
     "allowUnusedLabels": false,
