@@ -387,6 +387,8 @@ internal interface _UniFFILib : Library {
 
     fun uniffi_pubkymobile_fn_func_auth(`url`: RustBuffer.ByValue,`secretKey`: RustBuffer.ByValue,
     ): Pointer
+    fun uniffi_pubkymobile_fn_func_parse_auth_url(`url`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
+    ): RustBuffer.ByValue
     fun ffi_pubkymobile_rustbuffer_alloc(`size`: Int,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
     fun ffi_pubkymobile_rustbuffer_from_bytes(`bytes`: ForeignBytes.ByValue,_uniffi_out_err: RustCallStatus, 
@@ -503,6 +505,8 @@ internal interface _UniFFILib : Library {
     ): Unit
     fun uniffi_pubkymobile_checksum_func_auth(
     ): Short
+    fun uniffi_pubkymobile_checksum_func_parse_auth_url(
+    ): Short
     fun ffi_pubkymobile_uniffi_contract_version(
     ): Int
     
@@ -521,6 +525,9 @@ private fun uniffiCheckContractApiVersion(lib: _UniFFILib) {
 @Suppress("UNUSED_PARAMETER")
 private fun uniffiCheckApiChecksums(lib: _UniFFILib) {
     if (lib.uniffi_pubkymobile_checksum_func_auth() != 46918.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_pubkymobile_checksum_func_parse_auth_url() != 29088.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
 }
@@ -670,4 +677,12 @@ suspend fun `auth`(`url`: String, `secretKey`: String) : List<String> {
         NullCallStatusErrorHandler,
     )
 }
+
+fun `parseAuthUrl`(`url`: String): List<String> {
+    return FfiConverterSequenceString.lift(
+    rustCall() { _status ->
+    _UniFFILib.INSTANCE.uniffi_pubkymobile_fn_func_parse_auth_url(FfiConverterString.lower(`url`),_status)
+})
+}
+
 

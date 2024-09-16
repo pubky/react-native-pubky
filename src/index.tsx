@@ -28,3 +28,29 @@ export async function auth(
   }
   return ok(res[1]);
 }
+
+type Capability = {
+  path: string;
+  permission: string;
+};
+
+type PubkyAuthDetails = {
+  relay: string;
+  capabilities: Capability[];
+  secret: string;
+};
+
+export async function parseAuthUrl(
+  url: string
+): Promise<Result<PubkyAuthDetails>> {
+  try {
+    const res = await Pubky.parseAuthUrl(url);
+    if (res[0] === 'error') {
+      return err(res[1]);
+    }
+    const parsed = JSON.parse(res[1]);
+    return ok(parsed);
+  } catch (e) {
+    return err(JSON.stringify(e));
+  }
+}

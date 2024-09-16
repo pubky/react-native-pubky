@@ -11,8 +11,8 @@ npm install @synonymdev/react-native-pubky
 ## Implementation Status
 ### Implemented Methods
 - [x] [auth](#auth): Authentication functionality.
+- [x] [parseAuthUrl](#parseAuthUrl): Method to decode an authUrl.
 ### Methods to be Implemented
-- [ ] parseAuthUrl: Method to decode an authUrl.
 - [ ] publish: Functionality to publish content.
 - [ ] resolve: Functionality to resolve content.
 - [ ] signIn: Functionality to sign in.
@@ -30,6 +30,18 @@ if (authRes.isErr()) {
   return;
 }
 console.log(authRes.value);
+```
+### <a name="parseAuthUrl"></a>parseAuthUrl
+```js
+import { parseAuthUrl } from '@synonymdev/react-native-pubky';
+
+const pubkyAuthUrl = 'pubkyauth:///?relay=https://demo.httprelay.io/link&capabilities=/pub/pubky.app:rw,/pub/example.com/nested:rw&secret=FyzJ3gJ1W7boyFZC1Do9fYrRmDNgCLNRwEu_gaBgPUA';
+const parseRes = await parseAuthUrl(pubkyAuthUrl);
+if (parseRes.isErr()) {
+  console.log(parseRes.error.message);
+  return;
+}
+console.log(parseRes.value);
 ```
 
 ## Local Installation

@@ -10,6 +10,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import uniffi.pubkymobile.auth
+import uniffi.pubkymobile.parseAuthUrl
 
 class PubkyModule(reactContext: ReactApplicationContext) :
   ReactContextBaseJavaModule(reactContext) {
@@ -35,6 +36,19 @@ class PubkyModule(reactContext: ReactApplicationContext) :
               }
           }
       }
+  }
+
+  @ReactMethod
+  fun parseAuthUrl(url: String, promise: Promise) {
+    try {
+      val result = parseAuthUrl(url)
+      val array = Arguments.createArray().apply {
+        result.forEach { pushString(it) }
+      }
+      promise.resolve(array)
+    } catch (e: Exception) {
+      promise.reject("Error", e.message)
+    }
   }
 
   companion object {
