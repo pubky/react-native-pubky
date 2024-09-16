@@ -438,6 +438,15 @@ public func auth(url: String, secretKey: String) async  -> [String] {
 
 
 
+public func parseAuthUrl(url: String)  -> [String] {
+    return try!  FfiConverterSequenceString.lift(
+        try! rustCall() {
+    uniffi_pubkymobile_fn_func_parse_auth_url(
+        FfiConverterString.lower(url),$0)
+}
+    )
+}
+
 private enum InitializationResult {
     case ok
     case contractVersionMismatch
@@ -454,6 +463,9 @@ private var initializationResult: InitializationResult {
         return InitializationResult.contractVersionMismatch
     }
     if (uniffi_pubkymobile_checksum_func_auth() != 46918) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_pubkymobile_checksum_func_parse_auth_url() != 29088) {
         return InitializationResult.apiChecksumMismatch
     }
 

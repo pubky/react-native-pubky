@@ -1,6 +1,6 @@
 {
   "name": "@synonymdev/react-native-pubky",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "React Native Implementation of Pubky",
   "source": "./src/index.tsx",
   "main": "./lib/commonjs/index.js",
@@ -49,7 +49,8 @@
     "cargo-build": "cd rust && cargo build && cd pubky && cargo build && cd pubky && cargo build && cd ../ && cd pubky-common && cargo build && cd ../ && cd pubky-homeserver && cargo build && cd ../../../",
     "update-bindings:ios": "npm run cargo-build && node setup-ios-bindings.js && npm run reinstall",
     "update-bindings:android": "npm run cargo-build && node setup-android-bindings.js && npm run reinstall",
-    "update-bindings": "npm run reinstall && npm run cargo-build && npm run update-bindings:ios && npm run update-bindings:android"
+    "update-bindings": "npm run reinstall && npm run cargo-build && npm run update-bindings:ios && npm run update-bindings:android",
+    "rebuild": "rm -rf node_modules && cd example && rm -rf node_modules && cd ios && rm -rf Pods Podfile.lock build && cd ../../ && npm run cargo-build && yarn install && npm run update-bindings && cd example && yarn install && bundle install && cd ios && pod install && cd ../ && yarn build:ios && yarn ios"
   },
   "keywords": [
     "pubky",
