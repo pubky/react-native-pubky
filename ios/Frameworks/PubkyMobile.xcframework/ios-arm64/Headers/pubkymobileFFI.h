@@ -63,7 +63,7 @@ typedef struct RustCallStatus {
 typedef void (*UniFfiRustFutureContinuation)(void * _Nonnull, int8_t);
 
 // Scaffolding functions
-void* _Nonnull uniffi_pubkymobile_fn_func_auth(RustBuffer url, RustBuffer secret_key
+RustBuffer uniffi_pubkymobile_fn_func_auth(RustBuffer url, RustBuffer secret_key, RustCallStatus *_Nonnull out_status
 );
 RustBuffer uniffi_pubkymobile_fn_func_parse_auth_url(RustBuffer url, RustCallStatus *_Nonnull out_status
 );
