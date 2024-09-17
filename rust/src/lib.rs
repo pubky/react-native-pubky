@@ -99,6 +99,7 @@ fn parse_pubky_auth_url(url_str: &str) -> Result<PubkyAuthDetails, String> {
 
     let capabilities_str = query_params
         .get("capabilities")
+        .or_else(|| query_params.get("caps"))
         .cloned()
         .ok_or_else(|| "Missing capabilities".to_string())?;
 
