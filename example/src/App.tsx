@@ -9,7 +9,7 @@ export default function App() {
         onPress={async (): Promise<void> => {
           try {
             const res = await auth(
-              'pubkyAuthUrl',
+              'pubkyauth:///?caps=/pub/pubky.app/:rw,/pub/foo.bar/file:r&secret=_K8yj2nS4naHWytpECCX48XhjhGc8KAhlpnuLUiHYBI&relay=http://localhost:52244/',
               'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
             );
             if (res.isErr()) {

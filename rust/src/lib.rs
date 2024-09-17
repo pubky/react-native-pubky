@@ -5,9 +5,9 @@ use pubky::PubkyClient;
 use hex;
 use serde::Serialize;
 use url::Url;
+use tokio;
 
-#[uniffi::export]
-async fn auth(url: String, secret_key: String) -> Vec<String> {
+async fn authorize(url: String, secret_key: String) -> Vec<String> {
     let bytes = match hex::decode(&secret_key) {
         Ok(bytes) => bytes,
         Err(_) => return create_response_vector(true, "Failed to decode secret key".to_string())
@@ -20,8 +20,20 @@ async fn auth(url: String, secret_key: String) -> Vec<String> {
         }
     };
 
-    let keypair = pkarr::Keypair::from_secret_key(&secret_key_bytes);
     let client = PubkyClient::testnet();
+    let keypair = pkarr::Keypair::from_secret_key(&secret_key_bytes);
+
+    // const HOMESERVER: &'static str = "8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo";
+    // const URL: &'static str = "http://localhost:6287?relay=http://demo.httprelay.io/link";
+    // match client.signin(&keypair).await {
+    //     Ok(_) => {}, // Signin successful, continue to send_auth_token
+    //     Err(_) => {
+    //         match client.signup(&keypair, &PublicKey::try_from(HOMESERVER).unwrap()).await {
+    //             Ok(_) => {}, // Signup successful, continue to send_auth_token
+    //             Err(error) => return create_response_vector(true, format!("Failed to signup: {}", error)),
+    //         }
+    //     }
+    // }
 
     let parsed_url = match Url::parse(&url) {
         Ok(url) => url,
@@ -29,9 +41,16 @@ async fn auth(url: String, secret_key: String) -> Vec<String> {
     };
 
     match client.send_auth_token(&keypair, parsed_url).await {
-        Ok(_) => create_response_vector(false, "Auth token sent successfully".to_string()),
-        Err(error) => create_response_vector(true, format!("Error sending auth token: {:?}", error)),
+        Ok(_) => create_response_vector(false, "send_auth_token success".to_string()),
+        Err(error) => create_response_vector(true, format!("send_auth_token failure: {}", error)),
     }
+}
+
+
+#[uniffi::export]
+fn auth(url: String, secret_key: String) -> Vec<String> {
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    rt.block_on(authorize(url, secret_key))
 }
 
 #[uniffi::export]
