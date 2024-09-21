@@ -11,6 +11,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import uniffi.pubkymobile.auth
 import uniffi.pubkymobile.parseAuthUrl
+import uniffi.pubkymobile.publish
+import uniffi.pubkymobile.resolve
 
 class PubkyModule(reactContext: ReactApplicationContext) :
   ReactContextBaseJavaModule(reactContext) {
@@ -49,6 +51,44 @@ class PubkyModule(reactContext: ReactApplicationContext) :
     } catch (e: Exception) {
       promise.reject("Error", e.message)
     }
+  }
+
+  @ReactMethod
+  fun publish(recordName: String, recordContent: String, secretKey: String, promise: Promise) {
+      CoroutineScope(Dispatchers.IO).launch {
+          try {
+              val result = publish(recordName, recordContent, secretKey)
+              val array = Arguments.createArray().apply {
+                  result.forEach { pushString(it) }
+              }
+              withContext(Dispatchers.Main) {
+                  promise.resolve(array)
+              }
+          } catch (e: Exception) {
+              withContext(Dispatchers.Main) {
+                  promise.reject("Error", e.message)
+              }
+          }
+      }
+  }
+
+  @ReactMethod
+  fun resolve(publicKey: String, promise: Promise) {
+      CoroutineScope(Dispatchers.IO).launch {
+          try {
+              val result = resolve(publicKey)
+              val array = Arguments.createArray().apply {
+                  result.forEach { pushString(it) }
+              }
+              withContext(Dispatchers.Main) {
+                  promise.resolve(array)
+              }
+          } catch (e: Exception) {
+              withContext(Dispatchers.Main) {
+                  promise.reject("Error", e.message)
+              }
+          }
+      }
   }
 
   companion object {

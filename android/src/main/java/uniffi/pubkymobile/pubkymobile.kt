@@ -385,6 +385,10 @@ internal interface _UniFFILib : Library {
     ): RustBuffer.ByValue
     fun uniffi_pubkymobile_fn_func_parse_auth_url(`url`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
+    fun uniffi_pubkymobile_fn_func_publish(`recordName`: RustBuffer.ByValue,`recordContent`: RustBuffer.ByValue,`secretKey`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
+    ): RustBuffer.ByValue
+    fun uniffi_pubkymobile_fn_func_resolve(`publicKey`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
+    ): RustBuffer.ByValue
     fun ffi_pubkymobile_rustbuffer_alloc(`size`: Int,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
     fun ffi_pubkymobile_rustbuffer_from_bytes(`bytes`: ForeignBytes.ByValue,_uniffi_out_err: RustCallStatus, 
@@ -503,6 +507,10 @@ internal interface _UniFFILib : Library {
     ): Short
     fun uniffi_pubkymobile_checksum_func_parse_auth_url(
     ): Short
+    fun uniffi_pubkymobile_checksum_func_publish(
+    ): Short
+    fun uniffi_pubkymobile_checksum_func_resolve(
+    ): Short
     fun ffi_pubkymobile_uniffi_contract_version(
     ): Int
     
@@ -524,6 +532,12 @@ private fun uniffiCheckApiChecksums(lib: _UniFFILib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_pubkymobile_checksum_func_parse_auth_url() != 29088.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_pubkymobile_checksum_func_publish() != 20156.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_pubkymobile_checksum_func_resolve() != 18303.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
 }
@@ -624,6 +638,22 @@ fun `parseAuthUrl`(`url`: String): List<String> {
     return FfiConverterSequenceString.lift(
     rustCall() { _status ->
     _UniFFILib.INSTANCE.uniffi_pubkymobile_fn_func_parse_auth_url(FfiConverterString.lower(`url`),_status)
+})
+}
+
+
+fun `publish`(`recordName`: String, `recordContent`: String, `secretKey`: String): List<String> {
+    return FfiConverterSequenceString.lift(
+    rustCall() { _status ->
+    _UniFFILib.INSTANCE.uniffi_pubkymobile_fn_func_publish(FfiConverterString.lower(`recordName`),FfiConverterString.lower(`recordContent`),FfiConverterString.lower(`secretKey`),_status)
+})
+}
+
+
+fun `resolve`(`publicKey`: String): List<String> {
+    return FfiConverterSequenceString.lift(
+    rustCall() { _status ->
+    _UniFFILib.INSTANCE.uniffi_pubkymobile_fn_func_resolve(FfiConverterString.lower(`publicKey`),_status)
 })
 }
 

@@ -376,6 +376,26 @@ public func parseAuthUrl(url: String)  -> [String] {
     )
 }
 
+public func publish(recordName: String, recordContent: String, secretKey: String)  -> [String] {
+    return try!  FfiConverterSequenceString.lift(
+        try! rustCall() {
+    uniffi_pubkymobile_fn_func_publish(
+        FfiConverterString.lower(recordName),
+        FfiConverterString.lower(recordContent),
+        FfiConverterString.lower(secretKey),$0)
+}
+    )
+}
+
+public func resolve(publicKey: String)  -> [String] {
+    return try!  FfiConverterSequenceString.lift(
+        try! rustCall() {
+    uniffi_pubkymobile_fn_func_resolve(
+        FfiConverterString.lower(publicKey),$0)
+}
+    )
+}
+
 private enum InitializationResult {
     case ok
     case contractVersionMismatch
@@ -395,6 +415,12 @@ private var initializationResult: InitializationResult {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_pubkymobile_checksum_func_parse_auth_url() != 29088) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_pubkymobile_checksum_func_publish() != 20156) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_pubkymobile_checksum_func_resolve() != 18303) {
         return InitializationResult.apiChecksumMismatch
     }
 
