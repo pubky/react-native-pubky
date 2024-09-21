@@ -54,3 +54,48 @@ export async function parseAuthUrl(
     return err(JSON.stringify(e));
   }
 }
+
+export async function publish(
+  recordName: string,
+  recordContent: string,
+  secretKey: string
+): Promise<Result<string[]>> {
+  try {
+    const res = await Pubky.publish(recordName, recordContent, secretKey);
+    if (res[0] === 'error') {
+      return err(res[1]);
+    }
+    return ok(res[1]);
+  } catch (e) {
+    return err(JSON.stringify(e));
+  }
+}
+
+interface ITxt {
+  cache_flush: boolean;
+  class: string;
+  name: string;
+  rdata: {
+    strings: string[];
+    type: string;
+  };
+  ttl: number;
+}
+interface IDNSPacket {
+  dns_packet: string;
+  public_key: string;
+  records: ITxt[];
+  signature: string;
+  timestamp: number;
+}
+export async function resolve(publicKey: string): Promise<Result<IDNSPacket>> {
+  try {
+    const res = await Pubky.resolve(publicKey);
+    if (res[0] === 'error') {
+      return err(res[1]);
+    }
+    return ok(JSON.parse(res[1]));
+  } catch (e) {
+    return err(JSON.stringify(e));
+  }
+}

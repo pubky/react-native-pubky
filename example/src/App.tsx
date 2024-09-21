@@ -1,5 +1,10 @@
 import { StyleSheet, View, Button } from 'react-native';
-import { auth, parseAuthUrl } from '@synonymdev/react-native-pubky';
+import {
+  auth,
+  parseAuthUrl,
+  publish,
+  resolve,
+} from '@synonymdev/react-native-pubky';
 
 export default function App() {
   return (
@@ -9,7 +14,7 @@ export default function App() {
         onPress={async (): Promise<void> => {
           try {
             const res = await auth(
-              'pubkyauth:///?caps=/pub/pubky.app/:rw,/pub/foo.bar/file:r&secret=_K8yj2nS4naHWytpECCX48XhjhGc8KAhlpnuLUiHYBI&relay=http://localhost:52244/',
+              'pubkyauth:///?caps=/pub/pubky.app/:rw,/pub/foo.bar/file:r&secret=U55XnoH6vsMCpx1pxHtt8fReVg4Brvu9C0gUBuw-Jkw&relay=http://167.86.102.121:4173/',
               'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
             );
             if (res.isErr()) {
@@ -28,6 +33,42 @@ export default function App() {
           try {
             const res = await parseAuthUrl(
               'pubkyauth:///?relay=https://demo.httprelay.io/link&capabilities=/pub/pubky.app:rw,/pub/example.com/nested:rw&secret=FyzJ3gJ1W7boyFZC1Do9fYrRmDNgCLNRwEu_gaBgPUA'
+            );
+            if (res.isErr()) {
+              console.log(res.error.message);
+              return;
+            }
+            console.log(res.value);
+          } catch (e) {
+            console.log(e);
+          }
+        }}
+      />
+      <Button
+        title={'publish'}
+        onPress={async (): Promise<void> => {
+          try {
+            const res = await publish(
+              'recordnametest',
+              'recordcontenttest',
+              'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
+            );
+            if (res.isErr()) {
+              console.log(res.error.message);
+              return;
+            }
+            console.log(res.value);
+          } catch (e) {
+            console.log(e);
+          }
+        }}
+      />
+      <Button
+        title={'resolve'}
+        onPress={async (): Promise<void> => {
+          try {
+            const res = await resolve(
+              'z4e8s17cou9qmuwen8p1556jzhf1wktmzo6ijsfnri9c4hnrdfty'
             );
             if (res.isErr()) {
               console.log(res.error.message);

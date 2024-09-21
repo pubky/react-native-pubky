@@ -11,6 +11,16 @@ RCT_EXTERN_METHOD(parseAuthUrl:(NSString *)url
                   withResolver:(RCTPromiseResolveBlock)resolve
                   withRejecter:(RCTPromiseRejectBlock)reject)
 
+RCT_EXTERN_METHOD(publish:(NSString *)recordName
+                  recordContent:(NSString *)recordContent
+                  secretKey:(NSString *)secretKey
+                  withResolver:(RCTPromiseResolveBlock)resolve
+                  withRejecter:(RCTPromiseRejectBlock)reject)
+
+RCT_EXTERN_METHOD(resolve:(NSString *)publicKey
+                  withResolver:(RCTPromiseResolveBlock)resolve
+                  withRejecter:(RCTPromiseRejectBlock)reject)
+
 + (BOOL)requiresMainQueueSetup
 {
   return NO;

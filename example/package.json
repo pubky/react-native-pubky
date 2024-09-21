@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "android": "react-native run-android",
-    "ios": "bundle install && cd ios && pod install && cd ../ && react-native run-ios",
+    "ios": "bundle install && cd ios && pod install && cd ../ && react-native run-ios --simulator \"iPhone 15 Pro\"",
     "start": "react-native start",
     "build:android": "react-native build-android --extra-params \"--no-daemon --console=plain -PreactNativeArchitectures=arm64-v8a\"",
     "install-pods": "bundle install && cd ios && pod install && cd ../",
