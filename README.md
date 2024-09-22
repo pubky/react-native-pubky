@@ -17,6 +17,7 @@ npm install @synonymdev/react-native-pubky
 ### Methods to be Implemented
 - [ ] signIn: Functionality to sign in.
 - [ ] signUp: Functionality to sign up.
+- [ ] signOut: Functionality to sign out.
 
 
 ## Usage
