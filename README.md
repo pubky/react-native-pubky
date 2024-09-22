@@ -12,9 +12,9 @@ npm install @synonymdev/react-native-pubky
 ### Implemented Methods
 - [x] [auth](#auth): Authentication functionality.
 - [x] [parseAuthUrl](#parseAuthUrl): Method to decode an authUrl.
+- [x] publish: Functionality to publish content.
+- [x] resolve: Functionality to resolve content.
 ### Methods to be Implemented
-- [ ] publish: Functionality to publish content.
-- [ ] resolve: Functionality to resolve content.
 - [ ] signIn: Functionality to sign in.
 - [ ] signUp: Functionality to sign up.
 
@@ -24,7 +24,10 @@ npm install @synonymdev/react-native-pubky
 ```js
 import { auth } from '@synonymdev/react-native-pubky';
 
-const authRes = await auth("pubkyAuthUrl", "secretKey");
+const authRes = await auth(
+  'pubkyauth:///?caps=/pub/pubky.app/:rw,/pub/foo.bar/file:r&secret=U55XnoH6vsMCpx1pxHtt8fReVg4Brvu9C0gUBuw-Jkw&relay=http://167.86.102.121:4173/',
+  'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
+);
 if (authRes.isErr()) {
   console.log(authRes.error.message);
   return;
@@ -42,6 +45,34 @@ if (parseRes.isErr()) {
   return;
 }
 console.log(parseRes.value);
+```
+### <a name="publish"></a>publish
+```js
+import { publish } from '@synonymdev/react-native-pubky';
+
+const publishRes = await publish(
+  'recordnametest',
+  'recordcontenttest',
+  'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
+);
+if (publishRes.isErr()) {
+  console.log(publishRes.error.message);
+  return;
+}
+console.log(publishRes.value);
+```
+### <a name="resolve"></a>resolve
+```js
+import { resolve } from '@synonymdev/react-native-pubky';
+
+const resolveRes = await resolve(
+  'z4e8s17cou9qmuwen8p1556jzhf1wktmzo6ijsfnri9c4hnrdfty'
+);
+if (resolveRes.isErr()) {
+  console.log(resolveRes.error.message);
+  return;
+}
+console.log(resolveRes.value);
 ```
 
 ## Local Installation
