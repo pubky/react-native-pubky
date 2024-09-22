@@ -12,8 +12,8 @@ npm install @synonymdev/react-native-pubky
 ### Implemented Methods
 - [x] [auth](#auth): Authentication functionality.
 - [x] [parseAuthUrl](#parseAuthUrl): Method to decode an authUrl.
-- [x] publish: Functionality to publish content.
-- [x] resolve: Functionality to resolve content.
+- [x] [publish](#publish): Functionality to publish content.
+- [x] [resolve](#resolve): Functionality to resolve content.
 ### Methods to be Implemented
 - [ ] signIn: Functionality to sign in.
 - [ ] signUp: Functionality to sign up.
