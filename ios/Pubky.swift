@@ -49,4 +49,64 @@ class Pubky: NSObject {
             }
         }
     }
+
+    @objc(signUp:homeserver:withResolver:withRejecter:)
+    func signUp(_ secretKey: String, homeserver: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        Task {
+            do {
+                let result = try await react_native_pubky.signUp(secretKey: secretKey, homeserver: homeserver)
+                resolve(result)
+            } catch {
+                reject("signUp Error", "Failed to sign up", error)
+            }
+        }
+    }
+
+    @objc(signIn:withResolver:withRejecter:)
+    func signIn(_ secretKey: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        Task {
+            do {
+                let result = try await react_native_pubky.signIn(secretKey: secretKey)
+                resolve(result)
+            } catch {
+                reject("signIn Error", "Failed to sign in", error)
+            }
+        }
+    }
+
+    @objc(signOut:withResolver:withRejecter:)
+    func signOut(_ secretKey: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        Task {
+            do {
+                let result = try await react_native_pubky.signOut(secretKey: secretKey)
+                resolve(result)
+            } catch {
+                reject("signOut Error", "Failed to sign out", error)
+            }
+        }
+    }
+
+    @objc(put:content:withResolver:withRejecter:)
+    func put(_ url: String, content: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        Task {
+            do {
+                let result = try await react_native_pubky.put(url: url, content: content)
+                resolve(result)
+            } catch {
+                reject("put Error", "Failed to put", error)
+            }
+        }
+    }
+
+    @objc(get:withResolver:withRejecter:)
+    func get(_ url: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        Task {
+            do {
+                let result = try await react_native_pubky.get(url: url)
+                resolve(result)
+            } catch {
+                reject("get Error", "Failed to get", error)
+            }
+        }
+    }
 }

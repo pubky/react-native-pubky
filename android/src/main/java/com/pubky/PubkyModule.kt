@@ -13,6 +13,11 @@ import uniffi.pubkymobile.auth
 import uniffi.pubkymobile.parseAuthUrl
 import uniffi.pubkymobile.publish
 import uniffi.pubkymobile.resolve
+import uniffi.pubkymobile.signUp
+import uniffi.pubkymobile.signIn
+import uniffi.pubkymobile.signOut
+import uniffi.pubkymobile.put
+import uniffi.pubkymobile.get
 
 class PubkyModule(reactContext: ReactApplicationContext) :
   ReactContextBaseJavaModule(reactContext) {
@@ -77,6 +82,101 @@ class PubkyModule(reactContext: ReactApplicationContext) :
       CoroutineScope(Dispatchers.IO).launch {
           try {
               val result = resolve(publicKey)
+              val array = Arguments.createArray().apply {
+                  result.forEach { pushString(it) }
+              }
+              withContext(Dispatchers.Main) {
+                  promise.resolve(array)
+              }
+          } catch (e: Exception) {
+              withContext(Dispatchers.Main) {
+                  promise.reject("Error", e.message)
+              }
+          }
+      }
+  }
+
+  @ReactMethod
+  fun signUp(secretKey: String, homeserver: String, promise: Promise) {
+      CoroutineScope(Dispatchers.IO).launch {
+          try {
+              val result = signUp(secretKey, homeserver)
+              val array = Arguments.createArray().apply {
+                  result.forEach { pushString(it) }
+              }
+              withContext(Dispatchers.Main) {
+                  promise.resolve(array)
+              }
+          } catch (e: Exception) {
+              withContext(Dispatchers.Main) {
+                  promise.reject("Error", e.message)
+              }
+          }
+      }
+  }
+
+  @ReactMethod
+  fun signIn(secretKey: String, promise: Promise) {
+      CoroutineScope(Dispatchers.IO).launch {
+          try {
+              val result = signIn(secretKey)
+              val array = Arguments.createArray().apply {
+                  result.forEach { pushString(it) }
+              }
+              withContext(Dispatchers.Main) {
+                  promise.resolve(array)
+              }
+          } catch (e: Exception) {
+              withContext(Dispatchers.Main) {
+                  promise.reject("Error", e.message)
+              }
+          }
+      }
+  }
+
+  @ReactMethod
+  fun signOut(secretKey: String, promise: Promise) {
+      CoroutineScope(Dispatchers.IO).launch {
+          try {
+              val result = signOut(secretKey)
+              val array = Arguments.createArray().apply {
+                  result.forEach { pushString(it) }
+              }
+              withContext(Dispatchers.Main) {
+                  promise.resolve(array)
+              }
+          } catch (e: Exception) {
+              withContext(Dispatchers.Main) {
+                  promise.reject("Error", e.message)
+              }
+          }
+      }
+  }
+
+  @ReactMethod
+  fun put(url: String, content: String, promise: Promise) {
+      CoroutineScope(Dispatchers.IO).launch {
+          try {
+              val result = put(url, content)
+              val array = Arguments.createArray().apply {
+                  result.forEach { pushString(it) }
+              }
+              withContext(Dispatchers.Main) {
+                  promise.resolve(array)
+              }
+          } catch (e: Exception) {
+              withContext(Dispatchers.Main) {
+                  promise.reject("Error", e.message)
+              }
+          }
+      }
+  }
+
+  @ReactMethod
+  fun get(url: String, promise: Promise) {
+      CoroutineScope(Dispatchers.IO).launch {
+          try {
+              val result = get(url)
               val array = Arguments.createArray().apply {
                   result.forEach { pushString(it) }
               }

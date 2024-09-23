@@ -15,9 +15,11 @@ npm install @synonymdev/react-native-pubky
 - [x] [publish](#publish): Functionality to publish content.
 - [x] [resolve](#resolve): Functionality to resolve content.
 ### Methods to be Implemented
-- [ ] signIn: Functionality to sign in.
-- [ ] signUp: Functionality to sign up.
-- [ ] signOut: Functionality to sign out.
+- [ ] signIn: Sign-in to a homeserver.
+- [ ] signUp: Sign-up to a homeserver and update Pkarr accordingly.
+- [ ] signOut: Sign-out from a homeserver.
+- [ ] put: Upload a small payload to a given path.
+- [ ] get: Download a small payload from a given path relative to a pubky author.
 
 
 ## Usage
