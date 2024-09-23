@@ -25,6 +25,85 @@ use serde_json::json;
 use utils::*;
 
 #[uniffi::export]
+pub async fn sign_up(secret_key: String, homeserver: String) -> Vec<String> {
+    let client = PubkyClient::testnet();
+    let keypair = match get_keypair_from_secret_key(&secret_key) {
+        Ok(keypair) => keypair,
+        Err(error) => return create_response_vector(true, error),
+    };
+
+    let homeserver_public_key = match PublicKey::try_from(homeserver) {
+        Ok(key) => key,
+        Err(error) => return create_response_vector(true, format!("Invalid homeserver public key: {}", error)),
+    };
+
+    match client.signup(&keypair, &homeserver_public_key).await {
+        Ok(_) => create_response_vector(false, "signup success".to_string()),
+        Err(error) => create_response_vector(true, format!("signup failure: {}", error)),
+    }
+}
+
+#[uniffi::export]
+pub async fn sign_in(secret_key: String) -> Vec<String> {
+    let client = PubkyClient::testnet();
+    let keypair = match get_keypair_from_secret_key(&secret_key) {
+        Ok(keypair) => keypair,
+        Err(error) => return create_response_vector(true, error),
+    };
+    match client.signin(&keypair).await {
+        Ok(_) => create_response_vector(false, "Sign in success".to_string()),
+        Err(error) => {
+            create_response_vector(true, format!("Failed to sign in: {}", error))
+        }
+    }
+}
+
+#[uniffi::export]
+pub async fn sign_out(secret_key: String) -> Vec<String> {
+    let client = PubkyClient::testnet();
+    let keypair = match get_keypair_from_secret_key(&secret_key) {
+        Ok(keypair) => keypair,
+        Err(error) => return create_response_vector(true, error),
+    };
+    match client.signout(&keypair.public_key()).await {
+        Ok(_) => create_response_vector(false, "Sign out success".to_string()),
+        Err(error) => {
+            create_response_vector(true, format!("Failed to sign out: {}", error))
+        }
+    }
+}
+
+#[uniffi::export]
+pub async fn put(url: String, content: String) -> Vec<String> {
+    let client = PubkyClient::testnet();
+    let parsed_url = match Url::parse(&url) {
+        Ok(url) => url,
+        Err(_) => return create_response_vector(true, "Failed to parse URL".to_string()),
+    };
+    match client.put(parsed_url, &content.as_bytes()).await {
+        Ok(_) => create_response_vector(false, "Put success".to_string()),
+        Err(error) => {
+            create_response_vector(true, format!("Failed to put: {}", error))
+        }
+    }
+}
+
+#[uniffi::export]
+pub async fn get(url: String) -> Vec<String> {
+    let client = PubkyClient::testnet();
+    let parsed_url = match Url::parse(&url) {
+        Ok(url) => url,
+        Err(_) => return create_response_vector(true, "Failed to parse URL".to_string()),
+    };
+    match client.get(parsed_url).await {
+        Ok(_) => create_response_vector(false, "Get success".to_string()),
+        Err(error) => {
+            create_response_vector(true, format!("Failed to get: {}", error))
+        }
+    }
+}
+
+#[uniffi::export]
 fn resolve(public_key: String) -> Vec<String> {
     let public_key = match public_key.as_str().try_into() {
         Ok(key) => key,

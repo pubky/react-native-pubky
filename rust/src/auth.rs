@@ -13,18 +13,6 @@ pub async fn authorize(url: String, secret_key: String) -> Vec<String> {
         Err(error) => return create_response_vector(true, error),
     };
 
-    // const HOMESERVER: &'static str = "8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo";
-    // const URL: &'static str = "http://localhost:6287?relay=http://demo.httprelay.io/link";
-    // match client.signin(&keypair).await {
-    //     Ok(_) => {}, // Signin successful, continue to send_auth_token
-    //     Err(_) => {
-    //         match client.signup(&keypair, &PublicKey::try_from(HOMESERVER).unwrap()).await {
-    //             Ok(_) => {}, // Signup successful, continue to send_auth_token
-    //             Err(error) => return create_response_vector(true, format!("Failed to signup: {}", error)),
-    //         }
-    //     }
-    // }
-
     let parsed_url = match Url::parse(&url) {
         Ok(url) => url,
         Err(_) => return create_response_vector(true, "Failed to parse URL".to_string()),

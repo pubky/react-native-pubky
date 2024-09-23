@@ -65,11 +65,21 @@ typedef void (*UniFfiRustFutureContinuation)(void * _Nonnull, int8_t);
 // Scaffolding functions
 RustBuffer uniffi_pubkymobile_fn_func_auth(RustBuffer url, RustBuffer secret_key, RustCallStatus *_Nonnull out_status
 );
+void* _Nonnull uniffi_pubkymobile_fn_func_get(RustBuffer url
+);
 RustBuffer uniffi_pubkymobile_fn_func_parse_auth_url(RustBuffer url, RustCallStatus *_Nonnull out_status
 );
 RustBuffer uniffi_pubkymobile_fn_func_publish(RustBuffer record_name, RustBuffer record_content, RustBuffer secret_key, RustCallStatus *_Nonnull out_status
 );
+void* _Nonnull uniffi_pubkymobile_fn_func_put(RustBuffer url, RustBuffer content
+);
 RustBuffer uniffi_pubkymobile_fn_func_resolve(RustBuffer public_key, RustCallStatus *_Nonnull out_status
+);
+void* _Nonnull uniffi_pubkymobile_fn_func_sign_in(RustBuffer secret_key
+);
+void* _Nonnull uniffi_pubkymobile_fn_func_sign_out(RustBuffer secret_key
+);
+void* _Nonnull uniffi_pubkymobile_fn_func_sign_up(RustBuffer secret_key, RustBuffer homeserver
 );
 RustBuffer ffi_pubkymobile_rustbuffer_alloc(int32_t size, RustCallStatus *_Nonnull out_status
 );
@@ -188,13 +198,28 @@ void ffi_pubkymobile_rust_future_complete_void(void* _Nonnull handle, RustCallSt
 uint16_t uniffi_pubkymobile_checksum_func_auth(void
     
 );
+uint16_t uniffi_pubkymobile_checksum_func_get(void
+    
+);
 uint16_t uniffi_pubkymobile_checksum_func_parse_auth_url(void
     
 );
 uint16_t uniffi_pubkymobile_checksum_func_publish(void
     
 );
+uint16_t uniffi_pubkymobile_checksum_func_put(void
+    
+);
 uint16_t uniffi_pubkymobile_checksum_func_resolve(void
+    
+);
+uint16_t uniffi_pubkymobile_checksum_func_sign_in(void
+    
+);
+uint16_t uniffi_pubkymobile_checksum_func_sign_out(void
+    
+);
+uint16_t uniffi_pubkymobile_checksum_func_sign_up(void
     
 );
 uint32_t ffi_pubkymobile_uniffi_contract_version(void

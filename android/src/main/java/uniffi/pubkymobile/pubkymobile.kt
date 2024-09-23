@@ -29,6 +29,9 @@ import java.nio.ByteOrder
 import java.nio.CharBuffer
 import java.nio.charset.CodingErrorAction
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.coroutines.resume
+import kotlinx.coroutines.CancellableContinuation
+import kotlinx.coroutines.suspendCancellableCoroutine
 
 // This is a helper for safely working with byte buffers returned from the Rust code.
 // A rust-owned buffer is represented by its capacity, its current length, and a
@@ -377,18 +380,29 @@ internal interface _UniFFILib : Library {
             .also { lib: _UniFFILib ->
                 uniffiCheckContractApiVersion(lib)
                 uniffiCheckApiChecksums(lib)
+                uniffiRustFutureContinuationCallback.register(lib)
                 }
         }
     }
 
     fun uniffi_pubkymobile_fn_func_auth(`url`: RustBuffer.ByValue,`secretKey`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
+    fun uniffi_pubkymobile_fn_func_get(`url`: RustBuffer.ByValue,
+    ): Pointer
     fun uniffi_pubkymobile_fn_func_parse_auth_url(`url`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_pubkymobile_fn_func_publish(`recordName`: RustBuffer.ByValue,`recordContent`: RustBuffer.ByValue,`secretKey`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
+    fun uniffi_pubkymobile_fn_func_put(`url`: RustBuffer.ByValue,`content`: RustBuffer.ByValue,
+    ): Pointer
     fun uniffi_pubkymobile_fn_func_resolve(`publicKey`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
+    fun uniffi_pubkymobile_fn_func_sign_in(`secretKey`: RustBuffer.ByValue,
+    ): Pointer
+    fun uniffi_pubkymobile_fn_func_sign_out(`secretKey`: RustBuffer.ByValue,
+    ): Pointer
+    fun uniffi_pubkymobile_fn_func_sign_up(`secretKey`: RustBuffer.ByValue,`homeserver`: RustBuffer.ByValue,
+    ): Pointer
     fun ffi_pubkymobile_rustbuffer_alloc(`size`: Int,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
     fun ffi_pubkymobile_rustbuffer_from_bytes(`bytes`: ForeignBytes.ByValue,_uniffi_out_err: RustCallStatus, 
@@ -505,11 +519,21 @@ internal interface _UniFFILib : Library {
     ): Unit
     fun uniffi_pubkymobile_checksum_func_auth(
     ): Short
+    fun uniffi_pubkymobile_checksum_func_get(
+    ): Short
     fun uniffi_pubkymobile_checksum_func_parse_auth_url(
     ): Short
     fun uniffi_pubkymobile_checksum_func_publish(
     ): Short
+    fun uniffi_pubkymobile_checksum_func_put(
+    ): Short
     fun uniffi_pubkymobile_checksum_func_resolve(
+    ): Short
+    fun uniffi_pubkymobile_checksum_func_sign_in(
+    ): Short
+    fun uniffi_pubkymobile_checksum_func_sign_out(
+    ): Short
+    fun uniffi_pubkymobile_checksum_func_sign_up(
     ): Short
     fun ffi_pubkymobile_uniffi_contract_version(
     ): Int
@@ -531,18 +555,77 @@ private fun uniffiCheckApiChecksums(lib: _UniFFILib) {
     if (lib.uniffi_pubkymobile_checksum_func_auth() != 61378.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_pubkymobile_checksum_func_get() != 5395.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_pubkymobile_checksum_func_parse_auth_url() != 29088.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_pubkymobile_checksum_func_publish() != 20156.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_pubkymobile_checksum_func_put() != 47594.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_pubkymobile_checksum_func_resolve() != 18303.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_pubkymobile_checksum_func_sign_in() != 53969.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_pubkymobile_checksum_func_sign_out() != 32961.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_pubkymobile_checksum_func_sign_up() != 28083.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
 }
 
 // Async support
+// Async return type handlers
+
+internal const val UNIFFI_RUST_FUTURE_POLL_READY = 0.toShort()
+internal const val UNIFFI_RUST_FUTURE_POLL_MAYBE_READY = 1.toShort()
+
+internal val uniffiContinuationHandleMap = UniFfiHandleMap<CancellableContinuation<Short>>()
+
+// FFI type for Rust future continuations
+internal object uniffiRustFutureContinuationCallback: UniFffiRustFutureContinuationCallbackType {
+    override fun callback(continuationHandle: USize, pollResult: Short) {
+        uniffiContinuationHandleMap.remove(continuationHandle)?.resume(pollResult)
+    }
+
+    internal fun register(lib: _UniFFILib) {
+        lib.ffi_pubkymobile_rust_future_continuation_callback_set(this)
+    }
+}
+
+internal suspend fun<T, F, E: Exception> uniffiRustCallAsync(
+    rustFuture: Pointer,
+    pollFunc: (Pointer, USize) -> Unit,
+    completeFunc: (Pointer, RustCallStatus) -> F,
+    freeFunc: (Pointer) -> Unit,
+    liftFunc: (F) -> T,
+    errorHandler: CallStatusErrorHandler<E>
+): T {
+    try {
+        do {
+            val pollResult = suspendCancellableCoroutine<Short> { continuation ->
+                pollFunc(
+                    rustFuture,
+                    uniffiContinuationHandleMap.insert(continuation)
+                )
+            }
+        } while (pollResult != UNIFFI_RUST_FUTURE_POLL_READY);
+
+        return liftFunc(
+            rustCallWithError(errorHandler, { status -> completeFunc(rustFuture, status) })
+        )
+    } finally {
+        freeFunc(rustFuture)
+    }
+}
+
 
 // Public interface members begin here.
 
@@ -626,6 +709,10 @@ public object FfiConverterSequenceString: FfiConverterRustBuffer<List<String>> {
     }
 }
 
+
+
+
+
 fun `auth`(`url`: String, `secretKey`: String): List<String> {
     return FfiConverterSequenceString.lift(
     rustCall() { _status ->
@@ -633,6 +720,20 @@ fun `auth`(`url`: String, `secretKey`: String): List<String> {
 })
 }
 
+
+@Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
+suspend fun `get`(`url`: String) : List<String> {
+    return uniffiRustCallAsync(
+        _UniFFILib.INSTANCE.uniffi_pubkymobile_fn_func_get(FfiConverterString.lower(`url`),),
+        { future, continuation -> _UniFFILib.INSTANCE.ffi_pubkymobile_rust_future_poll_rust_buffer(future, continuation) },
+        { future, continuation -> _UniFFILib.INSTANCE.ffi_pubkymobile_rust_future_complete_rust_buffer(future, continuation) },
+        { future -> _UniFFILib.INSTANCE.ffi_pubkymobile_rust_future_free_rust_buffer(future) },
+        // lift function
+        { FfiConverterSequenceString.lift(it) },
+        // Error FFI converter
+        NullCallStatusErrorHandler,
+    )
+}
 
 fun `parseAuthUrl`(`url`: String): List<String> {
     return FfiConverterSequenceString.lift(
@@ -650,6 +751,20 @@ fun `publish`(`recordName`: String, `recordContent`: String, `secretKey`: String
 }
 
 
+@Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
+suspend fun `put`(`url`: String, `content`: String) : List<String> {
+    return uniffiRustCallAsync(
+        _UniFFILib.INSTANCE.uniffi_pubkymobile_fn_func_put(FfiConverterString.lower(`url`),FfiConverterString.lower(`content`),),
+        { future, continuation -> _UniFFILib.INSTANCE.ffi_pubkymobile_rust_future_poll_rust_buffer(future, continuation) },
+        { future, continuation -> _UniFFILib.INSTANCE.ffi_pubkymobile_rust_future_complete_rust_buffer(future, continuation) },
+        { future -> _UniFFILib.INSTANCE.ffi_pubkymobile_rust_future_free_rust_buffer(future) },
+        // lift function
+        { FfiConverterSequenceString.lift(it) },
+        // Error FFI converter
+        NullCallStatusErrorHandler,
+    )
+}
+
 fun `resolve`(`publicKey`: String): List<String> {
     return FfiConverterSequenceString.lift(
     rustCall() { _status ->
@@ -657,4 +772,46 @@ fun `resolve`(`publicKey`: String): List<String> {
 })
 }
 
+
+@Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
+suspend fun `signIn`(`secretKey`: String) : List<String> {
+    return uniffiRustCallAsync(
+        _UniFFILib.INSTANCE.uniffi_pubkymobile_fn_func_sign_in(FfiConverterString.lower(`secretKey`),),
+        { future, continuation -> _UniFFILib.INSTANCE.ffi_pubkymobile_rust_future_poll_rust_buffer(future, continuation) },
+        { future, continuation -> _UniFFILib.INSTANCE.ffi_pubkymobile_rust_future_complete_rust_buffer(future, continuation) },
+        { future -> _UniFFILib.INSTANCE.ffi_pubkymobile_rust_future_free_rust_buffer(future) },
+        // lift function
+        { FfiConverterSequenceString.lift(it) },
+        // Error FFI converter
+        NullCallStatusErrorHandler,
+    )
+}
+
+@Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
+suspend fun `signOut`(`secretKey`: String) : List<String> {
+    return uniffiRustCallAsync(
+        _UniFFILib.INSTANCE.uniffi_pubkymobile_fn_func_sign_out(FfiConverterString.lower(`secretKey`),),
+        { future, continuation -> _UniFFILib.INSTANCE.ffi_pubkymobile_rust_future_poll_rust_buffer(future, continuation) },
+        { future, continuation -> _UniFFILib.INSTANCE.ffi_pubkymobile_rust_future_complete_rust_buffer(future, continuation) },
+        { future -> _UniFFILib.INSTANCE.ffi_pubkymobile_rust_future_free_rust_buffer(future) },
+        // lift function
+        { FfiConverterSequenceString.lift(it) },
+        // Error FFI converter
+        NullCallStatusErrorHandler,
+    )
+}
+
+@Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
+suspend fun `signUp`(`secretKey`: String, `homeserver`: String) : List<String> {
+    return uniffiRustCallAsync(
+        _UniFFILib.INSTANCE.uniffi_pubkymobile_fn_func_sign_up(FfiConverterString.lower(`secretKey`),FfiConverterString.lower(`homeserver`),),
+        { future, continuation -> _UniFFILib.INSTANCE.ffi_pubkymobile_rust_future_poll_rust_buffer(future, continuation) },
+        { future, continuation -> _UniFFILib.INSTANCE.ffi_pubkymobile_rust_future_complete_rust_buffer(future, continuation) },
+        { future -> _UniFFILib.INSTANCE.ffi_pubkymobile_rust_future_free_rust_buffer(future) },
+        // lift function
+        { FfiConverterSequenceString.lift(it) },
+        // Error FFI converter
+        NullCallStatusErrorHandler,
+    )
+}
 

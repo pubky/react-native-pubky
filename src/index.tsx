@@ -99,3 +99,69 @@ export async function resolve(publicKey: string): Promise<Result<IDNSPacket>> {
     return err(JSON.stringify(e));
   }
 }
+
+export async function signUp(
+  secretKey: string,
+  homeserver: string
+): Promise<Result<string[]>> {
+  try {
+    const res = await Pubky.signUp(secretKey, homeserver);
+    if (res[0] === 'error') {
+      return err(res[1]);
+    }
+    return ok(res[1]);
+  } catch (e) {
+    return err(JSON.stringify(e));
+  }
+}
+
+export async function signIn(secretKey: string): Promise<Result<string[]>> {
+  try {
+    const res = await Pubky.signIn(secretKey);
+    if (res[0] === 'error') {
+      return err(res[1]);
+    }
+    return ok(res[1]);
+  } catch (e) {
+    return err(JSON.stringify(e));
+  }
+}
+
+export async function signOut(secretKey: string): Promise<Result<string[]>> {
+  try {
+    const res = await Pubky.signOut(secretKey);
+    if (res[0] === 'error') {
+      return err(res[1]);
+    }
+    return ok(res[1]);
+  } catch (e) {
+    return err(JSON.stringify(e));
+  }
+}
+
+export async function get(url: string): Promise<Result<string[]>> {
+  try {
+    const res = await Pubky.get(url);
+    if (res[0] === 'error') {
+      return err(res[1]);
+    }
+    return ok(JSON.parse(res[1]));
+  } catch (e) {
+    return err(JSON.stringify(e));
+  }
+}
+
+export async function put(
+  url: string,
+  content: Object
+): Promise<Result<string[]>> {
+  try {
+    const res = await Pubky.put(url, JSON.stringify(content));
+    if (res[0] === 'error') {
+      return err(res[1]);
+    }
+    return ok(res[1]);
+  } catch (e) {
+    return err(JSON.stringify(e));
+  }
+}

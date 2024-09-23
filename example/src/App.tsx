@@ -4,6 +4,11 @@ import {
   parseAuthUrl,
   publish,
   resolve,
+  signUp,
+  signIn,
+  signOut,
+  put,
+  get,
 } from '@synonymdev/react-native-pubky';
 
 export default function App() {
@@ -31,9 +36,9 @@ export default function App() {
         title={'parseAuthUrl'}
         onPress={async (): Promise<void> => {
           try {
-            const res = await parseAuthUrl(
-              'pubkyauth:///?relay=https://demo.httprelay.io/link&capabilities=/pub/pubky.app:rw,/pub/example.com/nested:rw&secret=FyzJ3gJ1W7boyFZC1Do9fYrRmDNgCLNRwEu_gaBgPUA'
-            );
+            const pubkyAuthUrl =
+              'pubkyauth:///?relay=https://demo.httprelay.io/link&capabilities=/pub/pubky.app:rw,/pub/example.com/nested:rw&secret=FyzJ3gJ1W7boyFZC1Do9fYrRmDNgCLNRwEu_gaBgPUA';
+            const res = await parseAuthUrl(pubkyAuthUrl);
             if (res.isErr()) {
               console.log(res.error.message);
               return;
@@ -49,9 +54,9 @@ export default function App() {
         onPress={async (): Promise<void> => {
           try {
             const res = await publish(
-              'recordnametest',
-              'recordcontenttest',
-              'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
+              'recordnametest', // Record Name
+              'recordcontenttest', // Record Content
+              'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' // Secret Key
             );
             if (res.isErr()) {
               console.log(res.error.message);
@@ -68,8 +73,90 @@ export default function App() {
         onPress={async (): Promise<void> => {
           try {
             const res = await resolve(
-              'z4e8s17cou9qmuwen8p1556jzhf1wktmzo6ijsfnri9c4hnrdfty'
+              'z4e8s17cou9qmuwen8p1556jzhf1wktmzo6ijsfnri9c4hnrdfty' // Public key
             );
+            if (res.isErr()) {
+              console.log(res.error.message);
+              return;
+            }
+            console.log(res.value);
+          } catch (e) {
+            console.log(e);
+          }
+        }}
+      />
+      <Button
+        title={'signup'}
+        onPress={async (): Promise<void> => {
+          try {
+            const res = await signUp(
+              'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', // Secret Key
+              'pubky://8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo' // Homeserver
+            );
+            if (res.isErr()) {
+              console.log(res.error.message);
+              return;
+            }
+            console.log(res.value);
+          } catch (e) {
+            console.log(e);
+          }
+        }}
+      />
+      <Button
+        title={'signin'}
+        onPress={async (): Promise<void> => {
+          try {
+            const res = await signIn(
+              'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' // Secret Key
+            );
+            if (res.isErr()) {
+              console.log(res.error.message);
+              return;
+            }
+            console.log(res.value);
+          } catch (e) {
+            console.log(e);
+          }
+        }}
+      />
+      <Button
+        title={'signout'}
+        onPress={async (): Promise<void> => {
+          try {
+            const res = await signOut(
+              'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' // Secret Key
+            );
+            if (res.isErr()) {
+              console.log(res.error.message);
+              return;
+            }
+            console.log(res.value);
+          } catch (e) {
+            console.log(e);
+          }
+        }}
+      />
+      <Button
+        title={'put'}
+        onPress={async (): Promise<void> => {
+          try {
+            const res = await put('', { data: 'test data' });
+            if (res.isErr()) {
+              console.log(res.error.message);
+              return;
+            }
+            console.log(res.value);
+          } catch (e) {
+            console.log(e);
+          }
+        }}
+      />
+      <Button
+        title={'get'}
+        onPress={async (): Promise<void> => {
+          try {
+            const res = await get('');
             if (res.isErr()) {
               console.log(res.error.message);
               return;
