@@ -3,9 +3,12 @@ pre-commit:
   commands:
     lint:
       glob: "*.{js,ts,jsx,tsx}"
+      exclude:
+        - "rust/**/*"
       run: npx eslint {staged_files}
     types:
-      glob: "*.{js,ts, jsx, tsx}"
+      glob: "*.{js,ts,jsx,tsx}"
+      exclude: "rust/**/*"
       run: npx tsc
 commit-msg:
   parallel: true
