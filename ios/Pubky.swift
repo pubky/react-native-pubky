@@ -133,4 +133,16 @@ class Pubky: NSObject {
             }
         }
     }
+
+    @objc(list:withResolver:withRejecter:)
+    func list(_ url: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        Task {
+            do {
+                let result = try await react_native_pubky.list(url: url)
+                resolve(result)
+            } catch {
+                reject("list Error", "Failed to list", error)
+            }
+        }
+    }
 }

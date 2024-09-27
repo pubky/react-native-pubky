@@ -447,6 +447,15 @@ public func get(url: String) async  -> [String] {
 
 
 
+public func list(url: String)  -> [String] {
+    return try!  FfiConverterSequenceString.lift(
+        try! rustCall() {
+    uniffi_pubkymobile_fn_func_list(
+        FfiConverterString.lower(url),$0)
+}
+    )
+}
+
 public func parseAuthUrl(url: String)  -> [String] {
     return try!  FfiConverterSequenceString.lift(
         try! rustCall() {
@@ -589,6 +598,9 @@ private var initializationResult: InitializationResult {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_pubkymobile_checksum_func_get() != 5395) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_pubkymobile_checksum_func_list() != 8522) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_pubkymobile_checksum_func_parse_auth_url() != 29088) {

@@ -212,3 +212,15 @@ export async function resolveHttps(
     return err(JSON.stringify(e));
   }
 }
+
+export async function list(url: string): Promise<Result<string[]>> {
+  try {
+    const res = await Pubky.list(url);
+    if (res[0] === 'error') {
+      return err(res[1]);
+    }
+    return ok(JSON.parse(res[1]));
+  } catch (e) {
+    return err(JSON.stringify(e));
+  }
+}

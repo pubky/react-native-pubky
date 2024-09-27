@@ -16,12 +16,13 @@ npm install @synonymdev/react-native-pubky
 - [x] [resolve](#resolve): Functionality to resolve content.
 - [x] [publishHttps](#publishHttps): Publish HTTPS records.
 - [x] [resolveHttps](#resolveHttps): Resolve HTTPS records.
+- [x] [put](#put): Upload a small payload to a given path.
+- [x] [get](#get): Download a small payload from a given path relative to a pubky author.
+- [x] [list](#list): Returns a list of Pubky URLs of the files in the path of the `url` provided.
 ### Methods to be Implemented
 - [ ] signIn: Sign-in to a homeserver.
 - [ ] signUp: Sign-up to a homeserver and update Pkarr accordingly.
 - [ ] signOut: Sign-out from a homeserver.
-- [ ] put: Upload a small payload to a given path.
-- [ ] get: Download a small payload from a given path relative to a pubky author.
 
 
 ## Usage
@@ -108,6 +109,49 @@ if (resolveHttpsRes.isErr()) {
   return;
 }
 console.log(resolveHttpsRes.value);
+```
+
+### <a name="put"></a>put
+```js
+import { put } from '@synonymdev/react-native-pubky';
+
+const putRes = await put(
+  'url', // URL
+  'content', // Content
+);
+if (putRes.isErr()) {
+  console.log(putRes.error.message);
+  return;
+}
+console.log(putRes.value);
+```
+
+### <a name="get"></a>get
+```js
+import { get } from '@synonymdev/react-native-pubky';
+
+const getRes = await get(
+  'url' // URL
+);
+if (getRes.isErr()) {
+  console.log(getRes.error.message);
+  return;
+}
+console.log(getRes.value);
+```
+
+### <a name="list"></a>list
+```js
+import { list } from '@synonymdev/react-native-pubky';
+
+const listRes = await list(
+  'url' // URL
+);
+if (listRes.isErr()) {
+  console.log(listRes.error.message);
+  return;
+}
+console.log(listRes.value);
 ```
 
 ## Local Installation

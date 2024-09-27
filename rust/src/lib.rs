@@ -366,6 +366,33 @@ pub fn publish(record_name: String, record_content: String, secret_key: String) 
 }
 
 #[uniffi::export]
+pub fn list(url: String) -> Vec<String> {
+    let runtime = TOKIO_RUNTIME.clone();
+    runtime.block_on(async {
+        let client = PUBKY_CLIENT.clone();
+        let parsed_url = match Url::parse(&url) {
+            Ok(url) => url,
+            Err(_) => return create_response_vector(true, "Failed to parse URL".to_string()),
+        };
+        let list_builder = match client.list(parsed_url) {
+            Ok(list) => list,
+            Err(error) => return create_response_vector(true, format!("Failed to list: {}", error)),
+        };
+        // Execute the non-Send part synchronously
+        let send_future = list_builder.send();
+        let send_res = match send_future.await {
+            Ok(res) => res,
+            Err(error) => return create_response_vector(true, format!("Failed to send list request: {}", error))
+        };
+        let json_string = match serde_json::to_string(&send_res) {
+            Ok(json) => json,
+            Err(error) => return create_response_vector(true, format!("Failed to serialize JSON: {}", error)),
+        };
+        create_response_vector(false, json_string)
+    })
+}
+
+#[uniffi::export]
 pub fn auth(url: String, secret_key: String) -> Vec<String> {
     let runtime = TOKIO_RUNTIME.clone();
     runtime.block_on(authorize(url, secret_key))

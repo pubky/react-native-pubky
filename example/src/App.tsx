@@ -11,6 +11,7 @@ import {
   get,
   resolveHttps,
   publishHttps,
+  list,
 } from '@synonymdev/react-native-pubky';
 
 export default function App() {
@@ -196,6 +197,24 @@ export default function App() {
           try {
             const res = await resolveHttps(
               'z4e8s17cou9qmuwen8p1556jzhf1wktmzo6ijsfnri9c4hnrdfty' // Public key
+            );
+            if (res.isErr()) {
+              console.log(res.error.message);
+              return;
+            }
+            console.log(res.value);
+          } catch (e) {
+            console.log(e);
+          }
+        }}
+      />
+
+      <Button
+        title={'list'}
+        onPress={async (): Promise<void> => {
+          try {
+            const res = await list(
+              'url' // URL
             );
             if (res.isErr()) {
               console.log(res.error.message);
