@@ -18,6 +18,8 @@ import uniffi.pubkymobile.signIn
 import uniffi.pubkymobile.signOut
 import uniffi.pubkymobile.put
 import uniffi.pubkymobile.get
+import uniffi.pubkymobile.publishHttps
+import uniffi.pubkymobile.resolveHttps
 
 class PubkyModule(reactContext: ReactApplicationContext) :
   ReactContextBaseJavaModule(reactContext) {
@@ -177,6 +179,44 @@ class PubkyModule(reactContext: ReactApplicationContext) :
       CoroutineScope(Dispatchers.IO).launch {
           try {
               val result = get(url)
+              val array = Arguments.createArray().apply {
+                  result.forEach { pushString(it) }
+              }
+              withContext(Dispatchers.Main) {
+                  promise.resolve(array)
+              }
+          } catch (e: Exception) {
+              withContext(Dispatchers.Main) {
+                  promise.reject("Error", e.message)
+              }
+          }
+      }
+  }
+
+  @ReactMethod
+  fun publishHttps(recordName: String, target: String, secretKey: String, promise: Promise) {
+      CoroutineScope(Dispatchers.IO).launch {
+          try {
+              val result = publishHttps(recordName, target, secretKey)
+              val array = Arguments.createArray().apply {
+                  result.forEach { pushString(it) }
+              }
+              withContext(Dispatchers.Main) {
+                  promise.resolve(array)
+              }
+          } catch (e: Exception) {
+              withContext(Dispatchers.Main) {
+                  promise.reject("Error", e.message)
+              }
+          }
+      }
+  }
+
+  @ReactMethod
+  fun resolveHttps(publicKey: String, promise: Promise) {
+      CoroutineScope(Dispatchers.IO).launch {
+          try {
+              val result = resolveHttps(publicKey)
               val array = Arguments.createArray().apply {
                   result.forEach { pushString(it) }
               }

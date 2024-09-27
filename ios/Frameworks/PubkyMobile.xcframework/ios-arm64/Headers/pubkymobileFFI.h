@@ -71,9 +71,13 @@ RustBuffer uniffi_pubkymobile_fn_func_parse_auth_url(RustBuffer url, RustCallSta
 );
 RustBuffer uniffi_pubkymobile_fn_func_publish(RustBuffer record_name, RustBuffer record_content, RustBuffer secret_key, RustCallStatus *_Nonnull out_status
 );
+RustBuffer uniffi_pubkymobile_fn_func_publish_https(RustBuffer record_name, RustBuffer target, RustBuffer secret_key, RustCallStatus *_Nonnull out_status
+);
 void* _Nonnull uniffi_pubkymobile_fn_func_put(RustBuffer url, RustBuffer content
 );
 RustBuffer uniffi_pubkymobile_fn_func_resolve(RustBuffer public_key, RustCallStatus *_Nonnull out_status
+);
+RustBuffer uniffi_pubkymobile_fn_func_resolve_https(RustBuffer public_key, RustCallStatus *_Nonnull out_status
 );
 void* _Nonnull uniffi_pubkymobile_fn_func_sign_in(RustBuffer secret_key
 );
@@ -207,10 +211,16 @@ uint16_t uniffi_pubkymobile_checksum_func_parse_auth_url(void
 uint16_t uniffi_pubkymobile_checksum_func_publish(void
     
 );
+uint16_t uniffi_pubkymobile_checksum_func_publish_https(void
+    
+);
 uint16_t uniffi_pubkymobile_checksum_func_put(void
     
 );
 uint16_t uniffi_pubkymobile_checksum_func_resolve(void
+    
+);
+uint16_t uniffi_pubkymobile_checksum_func_resolve_https(void
     
 );
 uint16_t uniffi_pubkymobile_checksum_func_sign_in(void

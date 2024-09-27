@@ -9,6 +9,8 @@ import {
   signOut,
   put,
   get,
+  resolveHttps,
+  publishHttps,
 } from '@synonymdev/react-native-pubky';
 
 export default function App() {
@@ -157,6 +159,44 @@ export default function App() {
         onPress={async (): Promise<void> => {
           try {
             const res = await get('');
+            if (res.isErr()) {
+              console.log(res.error.message);
+              return;
+            }
+            console.log(res.value);
+          } catch (e) {
+            console.log(e);
+          }
+        }}
+      />
+
+      <Button
+        title={'publishHttps'}
+        onPress={async (): Promise<void> => {
+          try {
+            const res = await publishHttps(
+              'example.com', // Record Name
+              'target.example.com', // Target
+              'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' // Secret Key
+            );
+            if (res.isErr()) {
+              console.log(res.error.message);
+              return;
+            }
+            console.log(res.value);
+          } catch (e) {
+            console.log(e);
+          }
+        }}
+      />
+
+      <Button
+        title={'resolveHttps'}
+        onPress={async (): Promise<void> => {
+          try {
+            const res = await resolveHttps(
+              'z4e8s17cou9qmuwen8p1556jzhf1wktmzo6ijsfnri9c4hnrdfty' // Public key
+            );
             if (res.isErr()) {
               console.log(res.error.message);
               return;

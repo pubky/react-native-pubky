@@ -393,9 +393,13 @@ internal interface _UniFFILib : Library {
     ): RustBuffer.ByValue
     fun uniffi_pubkymobile_fn_func_publish(`recordName`: RustBuffer.ByValue,`recordContent`: RustBuffer.ByValue,`secretKey`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
+    fun uniffi_pubkymobile_fn_func_publish_https(`recordName`: RustBuffer.ByValue,`target`: RustBuffer.ByValue,`secretKey`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
+    ): RustBuffer.ByValue
     fun uniffi_pubkymobile_fn_func_put(`url`: RustBuffer.ByValue,`content`: RustBuffer.ByValue,
     ): Pointer
     fun uniffi_pubkymobile_fn_func_resolve(`publicKey`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
+    ): RustBuffer.ByValue
+    fun uniffi_pubkymobile_fn_func_resolve_https(`publicKey`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_pubkymobile_fn_func_sign_in(`secretKey`: RustBuffer.ByValue,
     ): Pointer
@@ -525,9 +529,13 @@ internal interface _UniFFILib : Library {
     ): Short
     fun uniffi_pubkymobile_checksum_func_publish(
     ): Short
+    fun uniffi_pubkymobile_checksum_func_publish_https(
+    ): Short
     fun uniffi_pubkymobile_checksum_func_put(
     ): Short
     fun uniffi_pubkymobile_checksum_func_resolve(
+    ): Short
+    fun uniffi_pubkymobile_checksum_func_resolve_https(
     ): Short
     fun uniffi_pubkymobile_checksum_func_sign_in(
     ): Short
@@ -564,10 +572,16 @@ private fun uniffiCheckApiChecksums(lib: _UniFFILib) {
     if (lib.uniffi_pubkymobile_checksum_func_publish() != 20156.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_pubkymobile_checksum_func_publish_https() != 14705.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_pubkymobile_checksum_func_put() != 47594.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_pubkymobile_checksum_func_resolve() != 18303.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_pubkymobile_checksum_func_resolve_https() != 34593.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_pubkymobile_checksum_func_sign_in() != 53969.toShort()) {
@@ -751,6 +765,14 @@ fun `publish`(`recordName`: String, `recordContent`: String, `secretKey`: String
 }
 
 
+fun `publishHttps`(`recordName`: String, `target`: String, `secretKey`: String): List<String> {
+    return FfiConverterSequenceString.lift(
+    rustCall() { _status ->
+    _UniFFILib.INSTANCE.uniffi_pubkymobile_fn_func_publish_https(FfiConverterString.lower(`recordName`),FfiConverterString.lower(`target`),FfiConverterString.lower(`secretKey`),_status)
+})
+}
+
+
 @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
 suspend fun `put`(`url`: String, `content`: String) : List<String> {
     return uniffiRustCallAsync(
@@ -769,6 +791,14 @@ fun `resolve`(`publicKey`: String): List<String> {
     return FfiConverterSequenceString.lift(
     rustCall() { _status ->
     _UniFFILib.INSTANCE.uniffi_pubkymobile_fn_func_resolve(FfiConverterString.lower(`publicKey`),_status)
+})
+}
+
+
+fun `resolveHttps`(`publicKey`: String): List<String> {
+    return FfiConverterSequenceString.lift(
+    rustCall() { _status ->
+    _UniFFILib.INSTANCE.uniffi_pubkymobile_fn_func_resolve_https(FfiConverterString.lower(`publicKey`),_status)
 })
 }
 
