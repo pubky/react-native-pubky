@@ -231,6 +231,25 @@ class PubkyModule(reactContext: ReactApplicationContext) :
       }
   }
 
+  @ReactMethod
+  fun list(url: String, promise: Promise) {
+      CoroutineScope(Dispatchers.IO).launch {
+          try {
+              val result = list(url)
+              val array = Arguments.createArray().apply {
+                  result.forEach { pushString(it) }
+              }
+              withContext(Dispatchers.Main) {
+                  promise.resolve(array)
+              }
+          } catch (e: Exception) {
+              withContext(Dispatchers.Main) {
+                  promise.reject("Error", e.message)
+              }
+          }
+      }
+  }
+
   companion object {
     const val NAME = "Pubky"
   }
