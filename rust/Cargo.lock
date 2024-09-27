@@ -1822,8 +1822,9 @@ dependencies = [
 name = "react_native_pubky"
 version = "0.1.0"
 dependencies = [
- "base64 0.21.7",
+ "base64 0.22.1",
  "hex",
+ "once_cell",
  "pkarr",
  "pubky",
  "pubky-common",

@@ -43,6 +43,16 @@ RCT_EXTERN_METHOD(get:(NSString *)url
                   withResolver:(RCTPromiseResolveBlock)resolve
                   withRejecter:(RCTPromiseRejectBlock)reject)
 
+RCT_EXTERN_METHOD(publishHttps:(NSString *)recordName
+                  target:(NSString *)target
+                  secretKey:(NSString *)secretKey
+                  withResolver:(RCTPromiseResolveBlock)resolve
+                  withRejecter:(RCTPromiseRejectBlock)reject)
+
+RCT_EXTERN_METHOD(resolveHttps:(NSString *)publicKey
+                  withResolver:(RCTPromiseResolveBlock)resolve
+                  withRejecter:(RCTPromiseRejectBlock)reject)
+
 + (BOOL)requiresMainQueueSetup
 {
   return NO;

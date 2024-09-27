@@ -109,4 +109,28 @@ class Pubky: NSObject {
             }
         }
     }
+
+    @objc(publishHttps:target:secretKey:withResolver:withRejecter:)
+    func publishHttps(_ recordName: String, target: String, secretKey: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        Task {
+            do {
+                let result = try await react_native_pubky.publishHttps(recordName: recordName, target: target, secretKey: secretKey)
+                resolve(result)
+            } catch {
+                reject("publishHttps Error", "Failed to publish HTTPS record", error)
+            }
+        }
+    }
+
+    @objc(resolveHttps:withResolver:withRejecter:)
+    func resolveHttps(_ publicKey: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        Task {
+            do {
+                let result = try await react_native_pubky.resolveHttps(publicKey: publicKey)
+                resolve(result)
+            } catch {
+                reject("resolveHttps Error", "Failed to resolve HTTPS record", error)
+            }
+        }
+    }
 }

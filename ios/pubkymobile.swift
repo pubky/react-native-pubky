@@ -467,6 +467,17 @@ public func publish(recordName: String, recordContent: String, secretKey: String
     )
 }
 
+public func publishHttps(recordName: String, target: String, secretKey: String)  -> [String] {
+    return try!  FfiConverterSequenceString.lift(
+        try! rustCall() {
+    uniffi_pubkymobile_fn_func_publish_https(
+        FfiConverterString.lower(recordName),
+        FfiConverterString.lower(target),
+        FfiConverterString.lower(secretKey),$0)
+}
+    )
+}
+
 public func put(url: String, content: String) async  -> [String] {
     return try!  await uniffiRustCallAsync(
         rustFutureFunc: {
@@ -490,6 +501,15 @@ public func resolve(publicKey: String)  -> [String] {
     return try!  FfiConverterSequenceString.lift(
         try! rustCall() {
     uniffi_pubkymobile_fn_func_resolve(
+        FfiConverterString.lower(publicKey),$0)
+}
+    )
+}
+
+public func resolveHttps(publicKey: String)  -> [String] {
+    return try!  FfiConverterSequenceString.lift(
+        try! rustCall() {
+    uniffi_pubkymobile_fn_func_resolve_https(
         FfiConverterString.lower(publicKey),$0)
 }
     )
@@ -577,10 +597,16 @@ private var initializationResult: InitializationResult {
     if (uniffi_pubkymobile_checksum_func_publish() != 20156) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_pubkymobile_checksum_func_publish_https() != 14705) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_pubkymobile_checksum_func_put() != 47594) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_pubkymobile_checksum_func_resolve() != 18303) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_pubkymobile_checksum_func_resolve_https() != 34593) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_pubkymobile_checksum_func_sign_in() != 53969) {

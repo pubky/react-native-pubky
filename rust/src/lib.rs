@@ -15,18 +15,168 @@ use base64::Engine;
 use base64::engine::general_purpose;
 use pubky::PubkyClient;
 use hex;
+use hex::ToHex;
 use serde::Serialize;
 use url::Url;
 use tokio;
 use pkarr::{PkarrClient, SignedPacket, Keypair, dns, PublicKey};
-use pkarr::dns::rdata::RData;
-use pkarr::dns::ResourceRecord;
+use pkarr::dns::rdata::{RData, HTTPS, SVCB};
+use pkarr::dns::{Packet, ResourceRecord};
 use serde_json::json;
 use utils::*;
+use once_cell::sync::Lazy;
+use std::sync::Arc;
+use tokio::runtime::Runtime;
+
+static PKARR_CLIENT: Lazy<Arc<PkarrClient>> = Lazy::new(|| {
+    Arc::new(
+        PkarrClient::builder()
+            .build()
+            .expect("Failed to build PkarrClient"),
+    )
+});
+
+static PUBKY_CLIENT: Lazy<Arc<PubkyClient>> = Lazy::new(|| {
+    Arc::new(PubkyClient::testnet())
+});
+
+static TOKIO_RUNTIME: Lazy<Arc<Runtime>> = Lazy::new(|| {
+    Arc::new(
+        Runtime::new().expect("Failed to create Tokio runtime")
+    )
+});
+
+#[uniffi::export]
+pub fn publish_https(record_name: String, target: String, secret_key: String) -> Vec<String> {
+    let client = PKARR_CLIENT.clone();
+
+    let keypair = match get_keypair_from_secret_key(&secret_key) {
+        Ok(keypair) => keypair,
+        Err(error) => return create_response_vector(true, error),
+    };
+
+    // Create SVCB record with the target domain
+    let target = match  target.as_str().try_into() {
+        Ok(target) => target,
+        Err(e) => return create_response_vector(true, format!("Invalid target: {}", e)),
+    };
+    let svcb = SVCB::new(0, target);
+
+    // Create HTTPS record
+    let https_record = HTTPS(svcb);
+
+    // Create DNS packet
+    let mut packet = Packet::new_reply(0);
+    let dns_name = match dns::Name::new(&record_name) {
+        Ok(name) => name,
+        Err(e) => return create_response_vector(true, format!("Invalid DNS name: {}", e)),
+    };
+
+    packet.answers.push(ResourceRecord::new(
+        dns_name,
+        dns::CLASS::IN,
+        3600, // TTL in seconds
+        dns::rdata::RData::HTTPS(https_record),
+    ));
+
+    let signed_packet = match SignedPacket::from_packet(&keypair, &packet) {
+        Ok(signed_packet) => signed_packet,
+        Err(e) => return create_response_vector(true, format!("Failed to create signed packet: {}", e)),
+    };
+
+    match client.publish(&signed_packet) {
+        Ok(()) => create_response_vector(false, keypair.public_key().to_string()),
+        Err(e) => create_response_vector(true, format!("Failed to publish: {}", e)),
+    }
+}
+
+#[uniffi::export]
+pub fn resolve_https(public_key: String) -> Vec<String> {
+    let public_key = match public_key.as_str().try_into() {
+        Ok(key) => key,
+        Err(e) => return create_response_vector(true, format!("Invalid public key: {}", e)),
+    };
+
+    let client = PKARR_CLIENT.clone();
+
+    match client.resolve(&public_key) {
+        Ok(Some(signed_packet)) => {
+            // Extract HTTPS records from the signed packet
+            let https_records: Vec<serde_json::Value> = signed_packet.packet().answers.iter()
+                .filter_map(|record| {
+                    if let dns::rdata::RData::HTTPS(https) = &record.rdata {
+                        // Create a JSON object
+                        let mut https_json = serde_json::json!({
+                            "name": record.name.to_string(),
+                            "class": format!("{:?}", record.class),
+                            "ttl": record.ttl,
+                            "priority": https.0.priority,
+                            "target": https.0.target.to_string(),
+                        });
+
+                        // Access specific parameters using the constants from SVCB
+                        if let Some(port_param) = https.0.get_param(SVCB::PORT) {
+                            if port_param.len() == 2 {
+                                let port = u16::from_be_bytes([port_param[0], port_param[1]]);
+                                https_json["port"] = serde_json::json!(port);
+                            }
+                        }
+
+                        // Access ALPN parameter if needed
+                        if let Some(alpn_param) = https.0.get_param(SVCB::ALPN) {
+                            // Parse ALPN protocols (list of character strings)
+                            let mut position = 0;
+                            let mut alpn_protocols = Vec::new();
+                            while position < alpn_param.len() {
+                                let length = alpn_param[position] as usize;
+                                position += 1;
+                                if position + length <= alpn_param.len() {
+                                    let protocol = String::from_utf8_lossy(
+                                        &alpn_param[position..position + length],
+                                    );
+                                    alpn_protocols.push(protocol.to_string());
+                                    position += length;
+                                } else {
+                                    break; // Malformed ALPN parameter
+                                }
+                            }
+                            https_json["alpn"] = serde_json::json!(alpn_protocols);
+                        }
+                        // TODO: Add other parameters as needed.
+                        Some(https_json)
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+
+            if https_records.is_empty() {
+                return create_response_vector(true, "No HTTPS records found".to_string());
+            }
+
+            // Create JSON response
+            let json_obj = json!({
+                "public_key": public_key.to_string(),
+                "https_records": https_records,
+                "last_seen": signed_packet.last_seen(),
+                "timestamp": signed_packet.timestamp(),
+            });
+
+            let json_str = match serde_json::to_string(&json_obj) {
+                Ok(json) => json,
+                Err(e) => return create_response_vector(true, format!("Failed to serialize JSON: {}", e)),
+            };
+
+            create_response_vector(false, json_str)
+        },
+        Ok(None) => create_response_vector(true, "No signed packet found".to_string()),
+        Err(e) => create_response_vector(true, format!("Failed to resolve: {}", e)),
+    }
+}
 
 #[uniffi::export]
 pub async fn sign_up(secret_key: String, homeserver: String) -> Vec<String> {
-    let client = PubkyClient::testnet();
+    let client = PUBKY_CLIENT.clone();
     let keypair = match get_keypair_from_secret_key(&secret_key) {
         Ok(keypair) => keypair,
         Err(error) => return create_response_vector(true, error),
@@ -45,7 +195,7 @@ pub async fn sign_up(secret_key: String, homeserver: String) -> Vec<String> {
 
 #[uniffi::export]
 pub async fn sign_in(secret_key: String) -> Vec<String> {
-    let client = PubkyClient::testnet();
+    let client = PUBKY_CLIENT.clone();
     let keypair = match get_keypair_from_secret_key(&secret_key) {
         Ok(keypair) => keypair,
         Err(error) => return create_response_vector(true, error),
@@ -60,7 +210,7 @@ pub async fn sign_in(secret_key: String) -> Vec<String> {
 
 #[uniffi::export]
 pub async fn sign_out(secret_key: String) -> Vec<String> {
-    let client = PubkyClient::testnet();
+    let client = PUBKY_CLIENT.clone();
     let keypair = match get_keypair_from_secret_key(&secret_key) {
         Ok(keypair) => keypair,
         Err(error) => return create_response_vector(true, error),
@@ -75,7 +225,7 @@ pub async fn sign_out(secret_key: String) -> Vec<String> {
 
 #[uniffi::export]
 pub async fn put(url: String, content: String) -> Vec<String> {
-    let client = PubkyClient::testnet();
+    let client = PUBKY_CLIENT.clone();
     let parsed_url = match Url::parse(&url) {
         Ok(url) => url,
         Err(_) => return create_response_vector(true, "Failed to parse URL".to_string()),
@@ -90,7 +240,7 @@ pub async fn put(url: String, content: String) -> Vec<String> {
 
 #[uniffi::export]
 pub async fn get(url: String) -> Vec<String> {
-    let client = PubkyClient::testnet();
+    let client = PUBKY_CLIENT.clone();
     let parsed_url = match Url::parse(&url) {
         Ok(url) => url,
         Err(_) => return create_response_vector(true, "Failed to parse URL".to_string()),
@@ -103,16 +253,19 @@ pub async fn get(url: String) -> Vec<String> {
     }
 }
 
+/**
+* Resolve a signed packet from a public key
+* @param public_key The public key to resolve
+* @returns A vector with two elements: the first element is a boolean indicating success or failure,
+* and the second element is the response data (either an error message or the resolved signed packet)
+**/
 #[uniffi::export]
-fn resolve(public_key: String) -> Vec<String> {
+pub fn resolve(public_key: String) -> Vec<String> {
     let public_key = match public_key.as_str().try_into() {
         Ok(key) => key,
         Err(e) => return create_response_vector(true, format!("Invalid zbase32 encoded key: {}", e)),
     };
-    let client = match PkarrClient::builder().build() {
-        Ok(client) => client,
-        Err(e) => return create_response_vector(true, format!("Failed to build PkarrClient: {}", e)),
-    };
+    let client = PKARR_CLIENT.clone();
 
     match client.resolve(&public_key) {
         Ok(Some(signed_packet)) => {
@@ -135,16 +288,16 @@ fn resolve(public_key: String) -> Vec<String> {
             let bytes = signed_packet.as_bytes();
             let public_key = &bytes[..32];
             let signature = &bytes[32..96];
-            let timestamp = u64::from_be_bytes(match bytes[96..104].try_into() {
-                Ok(tsbytes) => tsbytes,
-                Err(_) => return create_response_vector(true, "Failed to convert timestamp bytes".to_string())
-            });
+            let timestamp = signed_packet.timestamp();
             let dns_packet = &bytes[104..];
+            let hex: String = signed_packet.encode_hex();
 
             let json_obj = json!({
+                "signed_packet": hex,
                 "public_key": general_purpose::STANDARD.encode(public_key),
                 "signature": general_purpose::STANDARD.encode(signature),
                 "timestamp": timestamp,
+                "last_seen": signed_packet.last_seen(),
                 "dns_packet": general_purpose::STANDARD.encode(dns_packet),
                 "records": json_records
             });
@@ -164,11 +317,8 @@ fn resolve(public_key: String) -> Vec<String> {
 }
 
 #[uniffi::export]
-fn publish(record_name: String, record_content: String, secret_key: String) -> Vec<String> {
-    let client = match PkarrClient::builder().build() {
-        Ok(client) => client,
-        Err(e) => return create_response_vector(true, format!("Failed to build PkarrClient: {}", e)),
-    };
+pub fn publish(record_name: String, record_content: String, secret_key: String) -> Vec<String> {
+    let client = PKARR_CLIENT.clone();
 
     let keypair = match get_keypair_from_secret_key(&secret_key) {
         Ok(keypair) => keypair,
@@ -215,15 +365,14 @@ fn publish(record_name: String, record_content: String, secret_key: String) -> V
     }
 }
 
-
 #[uniffi::export]
-fn auth(url: String, secret_key: String) -> Vec<String> {
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    rt.block_on(authorize(url, secret_key))
+pub fn auth(url: String, secret_key: String) -> Vec<String> {
+    let runtime = TOKIO_RUNTIME.clone();
+    runtime.block_on(authorize(url, secret_key))
 }
 
 #[uniffi::export]
-fn parse_auth_url(url: String) -> Vec<String> {
+pub fn parse_auth_url(url: String) -> Vec<String> {
     let parsed_details = match parse_pubky_auth_url(&url) {
         Ok(details) => details,
         Err(error) => return create_response_vector(true, error),

@@ -82,11 +82,13 @@ interface ITxt {
   ttl: number;
 }
 interface IDNSPacket {
-  dns_packet: string;
+  signed_packet: string;
   public_key: string;
-  records: ITxt[];
   signature: string;
   timestamp: number;
+  last_seen: number;
+  dns_packet: string;
+  records: ITxt[];
 }
 export async function resolve(publicKey: string): Promise<Result<IDNSPacket>> {
   try {
@@ -161,6 +163,51 @@ export async function put(
       return err(res[1]);
     }
     return ok(res[1]);
+  } catch (e) {
+    return err(JSON.stringify(e));
+  }
+}
+
+export async function publishHttps(
+  recordName: string,
+  target: string,
+  secretKey: string
+): Promise<Result<string[]>> {
+  try {
+    const res = await Pubky.publishHttps(recordName, target, secretKey);
+    if (res[0] === 'error') {
+      return err(res[1]);
+    }
+    return ok(res[1]);
+  } catch (e) {
+    return err(JSON.stringify(e));
+  }
+}
+
+interface IHttpsRecord {
+  name: string;
+  class: string;
+  ttl: number;
+  priority: number;
+  target: string;
+  port?: number;
+  alpn?: string[];
+}
+
+interface IHttpsResolveResult {
+  public_key: string;
+  https_records: IHttpsRecord[];
+}
+
+export async function resolveHttps(
+  publicKey: string
+): Promise<Result<IHttpsResolveResult>> {
+  try {
+    const res = await Pubky.resolveHttps(publicKey);
+    if (res[0] === 'error') {
+      return err(res[1]);
+    }
+    return ok(JSON.parse(res[1]));
   } catch (e) {
     return err(JSON.stringify(e));
   }

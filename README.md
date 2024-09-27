@@ -14,6 +14,8 @@ npm install @synonymdev/react-native-pubky
 - [x] [parseAuthUrl](#parseAuthUrl): Method to decode an authUrl.
 - [x] [publish](#publish): Functionality to publish content.
 - [x] [resolve](#resolve): Functionality to resolve content.
+- [x] [publishHttps](#publishHttps): Publish HTTPS records.
+- [x] [resolveHttps](#resolveHttps): Resolve HTTPS records.
 ### Methods to be Implemented
 - [ ] signIn: Sign-in to a homeserver.
 - [ ] signUp: Sign-up to a homeserver and update Pkarr accordingly.
@@ -76,6 +78,36 @@ if (resolveRes.isErr()) {
   return;
 }
 console.log(resolveRes.value);
+```
+
+### <a name="publishHttps"></a>publishHttps
+```js
+import { publishHttps } from '@synonymdev/react-native-pubky';
+
+const publishHttpsRes = await publishHttps(
+  'example.com', // Record Name
+  'target.example.com', // Target
+  'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' // Secret Key
+);
+if (publishHttpsRes.isErr()) {
+  console.log(publishHttpsRes.error.message);
+  return;
+}
+console.log(publishHttpsRes.value);
+```
+
+### <a name="resolveHttps"></a>resolveHttps
+```js
+import { resolveHttps } from '@synonymdev/react-native-pubky';
+
+const resolveHttpsRes = await resolveHttps(
+  'z4e8s17cou9qmuwen8p1556jzhf1wktmzo6ijsfnri9c4hnrdfty' // Public key
+);
+if (resolveHttpsRes.isErr()) {
+  console.log(resolveHttpsRes.error.message);
+  return;
+}
+console.log(resolveHttpsRes.value);
 ```
 
 ## Local Installation
