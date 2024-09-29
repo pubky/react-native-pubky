@@ -429,6 +429,14 @@ public func auth(url: String, secretKey: String)  -> [String] {
     )
 }
 
+public func generateSecretKey()  -> [String] {
+    return try!  FfiConverterSequenceString.lift(
+        try! rustCall() {
+    uniffi_pubkymobile_fn_func_generate_secret_key($0)
+}
+    )
+}
+
 public func get(url: String) async  -> [String] {
     return try!  await uniffiRustCallAsync(
         rustFutureFunc: {
@@ -446,6 +454,15 @@ public func get(url: String) async  -> [String] {
 }
 
 
+
+public func getPublicKeyFromSecretKey(secretKey: String)  -> [String] {
+    return try!  FfiConverterSequenceString.lift(
+        try! rustCall() {
+    uniffi_pubkymobile_fn_func_get_public_key_from_secret_key(
+        FfiConverterString.lower(secretKey),$0)
+}
+    )
+}
 
 public func list(url: String)  -> [String] {
     return try!  FfiConverterSequenceString.lift(
@@ -597,7 +614,13 @@ private var initializationResult: InitializationResult {
     if (uniffi_pubkymobile_checksum_func_auth() != 61378) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_pubkymobile_checksum_func_generate_secret_key() != 63116) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_pubkymobile_checksum_func_get() != 5395) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_pubkymobile_checksum_func_get_public_key_from_secret_key() != 23603) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_pubkymobile_checksum_func_list() != 8522) {

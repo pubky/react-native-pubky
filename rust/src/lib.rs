@@ -47,6 +47,45 @@ static TOKIO_RUNTIME: Lazy<Arc<Runtime>> = Lazy::new(|| {
 });
 
 #[uniffi::export]
+pub fn generate_secret_key() -> Vec<String> {
+    let keypair = generate_keypair();
+    let secret_key = get_secret_key_from_keypair(&keypair);
+    let public_key = keypair.public_key();
+    let uri = public_key.to_uri_string();
+    let json_obj = json!({
+        "secret_key": secret_key,
+        "public_key": public_key.to_string(),
+        "uri": uri,
+     });
+
+    let json_str = match serde_json::to_string(&json_obj) {
+        Ok(json) => json,
+        Err(e) => return create_response_vector(true, format!("Failed to serialize JSON: {}", e)),
+    };
+    create_response_vector(false, json_str)
+}
+
+#[uniffi::export]
+pub fn get_public_key_from_secret_key(secret_key: String) -> Vec<String> {
+    let keypair = match get_keypair_from_secret_key(&secret_key) {
+        Ok(keypair) => keypair,
+        Err(error) => return create_response_vector(true, error),
+    };
+    let public_key = keypair.public_key();
+    let uri = public_key.to_uri_string();
+    let json_obj = json!({
+        "public_key": public_key.to_string(),
+        "uri": uri,
+     });
+
+    let json_str = match serde_json::to_string(&json_obj) {
+        Ok(json) => json,
+        Err(e) => return create_response_vector(true, format!("Failed to serialize JSON: {}", e)),
+    };
+    create_response_vector(false, json_str)
+}
+
+#[uniffi::export]
 pub fn publish_https(record_name: String, target: String, secret_key: String) -> Vec<String> {
     let client = PKARR_CLIENT.clone();
 

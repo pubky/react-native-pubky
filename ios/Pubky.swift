@@ -143,4 +143,28 @@ class Pubky: NSObject {
             }
         }
     }
+
+    @objc(generateSecretKey:withRejecter:)
+    func generateSecretKey(_ resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        Task {
+            do {
+                let result = react_native_pubky.generateSecretKey()
+                resolve(result)
+            } catch {
+                reject("generateSecretKey Error", "Failed to generate secret key", error)
+            }
+        }
+    }
+
+    @objc(getPublicKeyFromSecretKey:withResolver:withRejecter:)
+    func getPublicKeyFromSecretKey(_ secretKey: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        Task {
+            do {
+                let result = react_native_pubky.getPublicKeyFromSecretKey(secretKey: secretKey)
+                resolve(result)
+            } catch {
+                reject("getPublicKeyFromSecretKey Error", "Failed to get public key", error)
+            }
+        }
+    }
 }

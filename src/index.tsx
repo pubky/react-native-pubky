@@ -224,3 +224,36 @@ export async function list(url: string): Promise<Result<string[]>> {
     return err(JSON.stringify(e));
   }
 }
+
+interface IPublicKeyInfo {
+  public_key: string;
+  uri: string;
+}
+interface IGenerateSecretKey extends IPublicKeyInfo {
+  secret_key: string;
+}
+export async function generateSecretKey(): Promise<Result<IGenerateSecretKey>> {
+  try {
+    const res = await Pubky.generateSecretKey();
+    if (res[0] === 'error') {
+      return err(res[1]);
+    }
+    return ok(JSON.parse(res[1]));
+  } catch (e) {
+    return err(JSON.stringify(e));
+  }
+}
+
+export async function getPublicKeyFromSecretKey(
+  secretKey: string
+): Promise<Result<IPublicKeyInfo>> {
+  try {
+    const res = await Pubky.getPublicKeyFromSecretKey(secretKey);
+    if (res[0] === 'error') {
+      return err(res[1]);
+    }
+    return ok(JSON.parse(res[1]));
+  } catch (e) {
+    return err(JSON.stringify(e));
+  }
+}
