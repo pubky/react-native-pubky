@@ -16,13 +16,11 @@ class Pubky: NSObject {
 
     @objc(parseAuthUrl:withResolver:withRejecter:)
     func parseAuthUrl(_ url: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
-        Task {
-            do {
-                let result = react_native_pubky.parseAuthUrl(url: url)
-                resolve(result)
-            } catch {
-                reject("parseAuthUrl Error", "Failed to parse auth url", error)
-            }
+        do {
+            let result = react_native_pubky.parseAuthUrl(url: url)
+            resolve(result)
+        } catch {
+            reject("parseAuthUrl Error", "Failed to parse auth url", error)
         }
     }
 
@@ -30,7 +28,7 @@ class Pubky: NSObject {
     func publish(recordName: String, recordContent: String, secretKey: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
         Task {
             do {
-                let result = react_native_pubky.publish(recordName: recordName, recordContent: recordContent, secretKey: secretKey)
+                let result = try await react_native_pubky.publish(recordName: recordName, recordContent: recordContent, secretKey: secretKey)
                 resolve(result)
             } catch {
                 reject("publish Error", "Failed to publish", error)
@@ -42,7 +40,7 @@ class Pubky: NSObject {
     func resolve(publicKey: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
         Task {
             do {
-                let result = react_native_pubky.resolve(publicKey: publicKey)
+                let result = try await react_native_pubky.resolve(publicKey: publicKey)
                 resolve(result)
             } catch {
                 reject("resolve Error", "Failed to resolve", error)
