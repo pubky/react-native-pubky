@@ -12,6 +12,8 @@ import {
   resolveHttps,
   publishHttps,
   list,
+  generateSecretKey,
+  getPublicKeyFromSecretKey,
 } from '@synonymdev/react-native-pubky';
 
 export default function App() {
@@ -215,6 +217,39 @@ export default function App() {
           try {
             const res = await list(
               'url' // URL
+            );
+            if (res.isErr()) {
+              console.log(res.error.message);
+              return;
+            }
+            console.log(res.value);
+          } catch (e) {
+            console.log(e);
+          }
+        }}
+      />
+      <Button
+        title={'generateSecretKey'}
+        onPress={async (): Promise<void> => {
+          try {
+            const res = await generateSecretKey();
+            if (res.isErr()) {
+              console.log(res.error.message);
+              return;
+            }
+            console.log('Generated Secret Key:', res.value);
+          } catch (e) {
+            console.log(e);
+          }
+        }}
+      />
+
+      <Button
+        title={'getPublicKeyFromSecretKey'}
+        onPress={async (): Promise<void> => {
+          try {
+            const res = await getPublicKeyFromSecretKey(
+              'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' // Secret Key
             );
             if (res.isErr()) {
               console.log(res.error.message);

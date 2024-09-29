@@ -9,17 +9,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import uniffi.pubkymobile.auth
-import uniffi.pubkymobile.parseAuthUrl
-import uniffi.pubkymobile.publish
-import uniffi.pubkymobile.resolve
-import uniffi.pubkymobile.signUp
-import uniffi.pubkymobile.signIn
-import uniffi.pubkymobile.signOut
-import uniffi.pubkymobile.put
-import uniffi.pubkymobile.get
-import uniffi.pubkymobile.publishHttps
-import uniffi.pubkymobile.resolveHttps
+import uniffi.pubkymobile.*
 
 class PubkyModule(reactContext: ReactApplicationContext) :
   ReactContextBaseJavaModule(reactContext) {
@@ -236,6 +226,44 @@ class PubkyModule(reactContext: ReactApplicationContext) :
       CoroutineScope(Dispatchers.IO).launch {
           try {
               val result = list(url)
+              val array = Arguments.createArray().apply {
+                  result.forEach { pushString(it) }
+              }
+              withContext(Dispatchers.Main) {
+                  promise.resolve(array)
+              }
+          } catch (e: Exception) {
+              withContext(Dispatchers.Main) {
+                  promise.reject("Error", e.message)
+              }
+          }
+      }
+  }
+
+  @ReactMethod
+  fun generateSecretKey(promise: Promise) {
+      CoroutineScope(Dispatchers.IO).launch {
+          try {
+              val result = generate_secret_key()
+              val array = Arguments.createArray().apply {
+                  result.forEach { pushString(it) }
+              }
+              withContext(Dispatchers.Main) {
+                  promise.resolve(array)
+              }
+          } catch (e: Exception) {
+              withContext(Dispatchers.Main) {
+                  promise.reject("Error", e.message)
+              }
+          }
+      }
+  }
+
+  @ReactMethod
+  fun getPublicKeyFromSecretKey(secretKey: String, promise: Promise) {
+      CoroutineScope(Dispatchers.IO).launch {
+          try {
+              val result = getPublicKeyFromSecretKey(secretKey)
               val array = Arguments.createArray().apply {
                   result.forEach { pushString(it) }
               }

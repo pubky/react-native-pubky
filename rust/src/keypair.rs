@@ -1,5 +1,8 @@
 use pkarr::Keypair;
 
+/**
+ * Get a keypair from a secret key
+ */
 pub fn get_keypair_from_secret_key(secret_key: &str) -> Result<Keypair, String> {
     let bytes = match hex::decode(&secret_key) {
         Ok(bytes) => bytes,
@@ -14,4 +17,18 @@ pub fn get_keypair_from_secret_key(secret_key: &str) -> Result<Keypair, String> 
     };
 
     Ok(Keypair::from_secret_key(&secret_key_bytes))
+}
+
+/**
+ * Get the secret key from a keypair
+ */
+pub fn get_secret_key_from_keypair(keypair: &Keypair) -> String {
+    hex::encode(keypair.secret_key())
+}
+
+/**
+ * Generate a new keypair
+ */
+pub fn generate_keypair() -> Keypair {
+    Keypair::random()
 }

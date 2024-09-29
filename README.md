@@ -19,6 +19,8 @@ npm install @synonymdev/react-native-pubky
 - [x] [put](#put): Upload a small payload to a given path.
 - [x] [get](#get): Download a small payload from a given path relative to a pubky author.
 - [x] [list](#list): Returns a list of Pubky URLs of the files in the path of the `url` provided.
+- [x] [generateSecretKey](#generateSecretKey): Generate a secret key.
+- [x] [getPublicKeyFromSecretKey](#getPublicKeyFromSecretKey): Get the public key string and uri from a secret key.
 ### Methods to be Implemented
 - [ ] signIn: Sign-in to a homeserver.
 - [ ] signUp: Sign-up to a homeserver and update Pkarr accordingly.
@@ -152,6 +154,30 @@ if (listRes.isErr()) {
   return;
 }
 console.log(listRes.value);
+```
+
+### <a name="generateSecretKey"></a>generateSecretKey
+```js
+import { generateSecretKey } from '@synonymdev/react-native-pubky';
+
+const generateSecretKeyRes = await generateSecretKey();
+if (generateSecretKeyRes.isErr()) {
+  console.log(generateSecretKeyRes.error.message);
+  return;
+}
+console.log(generateSecretKeyRes.value);
+```
+
+### <a name="getPublicKeyFromSecretKey"></a>getPublicKeyFromSecretKey
+```js
+import { getPublicKeyFromSecretKey } from '@synonymdev/react-native-pubky';
+
+const getPublicKeyFromSecretKeyRes = await getPublicKeyFromSecretKey('e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855');
+if (getPublicKeyFromSecretKeyRes.isErr()) {
+  console.log(getPublicKeyFromSecretKeyRes.error.message);
+  return;
+}
+console.log(getPublicKeyFromSecretKeyRes.value);
 ```
 
 ## Local Installation
