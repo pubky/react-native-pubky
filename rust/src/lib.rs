@@ -364,7 +364,6 @@ pub fn publish(record_name: String, record_content: String, secret_key: String) 
         }
     }
 }
-
 #[uniffi::export]
 pub fn list(url: String) -> Vec<String> {
     let runtime = TOKIO_RUNTIME.clone();

@@ -1,31 +1,42 @@
 use std::fs;
 
-use std::path::Path;
-
 use heed::{Env, EnvOpenOptions};
 
 mod migrations;
 pub mod tables;
 
+use crate::config::Config;
+
 use tables::{Tables, TABLES_COUNT};
 
-pub const MAX_LIST_LIMIT: u16 = 100;
+pub const DEFAULT_MAP_SIZE: usize = 10995116277760; // 10TB (not = disk-space used)
 
 #[derive(Debug, Clone)]
 pub struct DB {
     pub(crate) env: Env,
     pub(crate) tables: Tables,
+    pub(crate) config: Config,
 }
 
 impl DB {
-    pub fn open(storage: &Path) -> anyhow::Result<Self> {
-        fs::create_dir_all(storage).unwrap();
+    pub fn open(config: Config) -> anyhow::Result<Self> {
+        fs::create_dir_all(config.storage())?;
 
-        let env = unsafe { EnvOpenOptions::new().max_dbs(TABLES_COUNT).open(storage) }?;
+        let env = unsafe {
+            EnvOpenOptions::new()
+                .max_dbs(TABLES_COUNT)
+                // TODO: Add a configuration option?
+                .map_size(DEFAULT_MAP_SIZE)
+                .open(config.storage())
+        }?;
 
         let tables = migrations::run(&env)?;
 
-        let db = DB { env, tables };
+        let db = DB {
+            env,
+            tables,
+            config,
+        };
 
         Ok(db)
     }
@@ -34,18 +45,15 @@ impl DB {
 #[cfg(test)]
 mod tests {
     use bytes::Bytes;
-    use pkarr::Keypair;
-    use pubky_common::timestamp::Timestamp;
+    use pkarr::{mainline::Testnet, Keypair};
+
+    use crate::config::Config;
 
     use super::DB;
 
     #[tokio::test]
     async fn entries() {
-        let storage = std::env::temp_dir()
-            .join(Timestamp::now().to_string())
-            .join("pubky");
-
-        let db = DB::open(&storage).unwrap();
+        let db = DB::open(Config::test(&Testnet::new(0))).unwrap();
 
         let keypair = Keypair::random();
         let path = "/pub/foo.txt";
