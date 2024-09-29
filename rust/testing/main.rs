@@ -8,7 +8,7 @@ use pubky::PubkyClient;
 
 static PUBKY_CLIENT: Lazy<Arc<PubkyClient>> = Lazy::new(|| {
     let custom_testnet = Testnet {
-        bootstrap: vec!["http://localhost:15411".to_string()],
+        bootstrap: vec!["http://localhost:6287".to_string()],
         nodes: vec![],
     };
 
