@@ -11,13 +11,17 @@ name = "pubkymobile"
 [net]
 git-fetch-with-cli = true
 
+[[bin]]
+name = "testing"
+path = "testing/main.rs"
+
 [dependencies]
 uniffi = { version = "0.25.3", features = [ "cli" ] }
 serde_json = "1.0.114"
 hex = "0.4.3"
 sha2 = "0.10.8"
 serde = { version = "^1.0.209", features = ["derive"] }
-tokio = "1.40.0"
+tokio = { version = "1.40.0", features = ["rt", "rt-multi-thread", "macros"] }
 url = "2.5.2"
 pkarr = { git = "https://github.com/Pubky/pkarr", branch = "v3", features = ["async", "rand"] }
 pubky = { version = "0.1.0", path = "pubky/pubky" }

@@ -175,6 +175,21 @@ pub fn resolve_https(public_key: String) -> Vec<String> {
 }
 
 #[uniffi::export]
+pub async fn signin_or_signup(secret_key: String, homeserver: String) -> Vec<String> {
+    let sign_in_res = match sign_in(secret_key.clone()) {
+        Ok(res) => res,
+        Err(error) => return create_response_vector(true, error),
+    };
+    if sign_in_res[0] == "success" {
+        return sign_in_res;
+    }
+    match sign_up(secret_key.clone(), homeserver) {
+        Ok(res) => res,
+        Err(error) => create_response_vector(true, error),
+    }
+}
+
+#[uniffi::export]
 pub async fn sign_up(secret_key: String, homeserver: String) -> Vec<String> {
     let client = PUBKY_CLIENT.clone();
     let keypair = match get_keypair_from_secret_key(&secret_key) {
@@ -201,7 +216,9 @@ pub async fn sign_in(secret_key: String) -> Vec<String> {
         Err(error) => return create_response_vector(true, error),
     };
     match client.signin(&keypair).await {
-        Ok(_) => create_response_vector(false, "Sign in success".to_string()),
+        Ok(session) => {
+            create_response_vector(false, session.pubky().to_uri_string())
+        },
         Err(error) => {
             create_response_vector(true, format!("Failed to sign in: {}", error))
         }
