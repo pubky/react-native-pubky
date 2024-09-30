@@ -8,6 +8,10 @@ edition = "2021"
 crate_type = ["cdylib", "staticlib"]
 name = "pubkymobile"
 
+[[bin]]
+name = "testing"
+path = "testing/main.rs"
+
 [net]
 git-fetch-with-cli = true
 
