@@ -16,15 +16,17 @@ npm install @synonymdev/react-native-pubky
 - [x] [resolve](#resolve): Functionality to resolve content.
 - [x] [publishHttps](#publishHttps): Publish HTTPS records.
 - [x] [resolveHttps](#resolveHttps): Resolve HTTPS records.
+- [x] [signUp](#signUp): Sign-up to a homeserver and update Pkarr accordingly.
+- [x] [signIn](#signIn): Sign-in to a homeserver.
+- [x] [signOut](#signOut): Sign-out from a homeserver.
 - [x] [put](#put): Upload a small payload to a given path.
 - [x] [get](#get): Download a small payload from a given path relative to a pubky author.
 - [x] [list](#list): Returns a list of Pubky URLs of the files in the path of the `url` provided.
 - [x] [generateSecretKey](#generateSecretKey): Generate a secret key.
 - [x] [getPublicKeyFromSecretKey](#getPublicKeyFromSecretKey): Get the public key string and uri from a secret key.
 ### Methods to be Implemented
-- [ ] signIn: Sign-in to a homeserver.
-- [ ] signUp: Sign-up to a homeserver and update Pkarr accordingly.
-- [ ] signOut: Sign-out from a homeserver.
+- [ ] getProfile: Retrieve the profile of a user.
+- [ ] editProfile: Submit changes to the specified profile.
 
 
 ## Usage
@@ -118,8 +120,8 @@ console.log(resolveHttpsRes.value);
 import { put } from '@synonymdev/react-native-pubky';
 
 const putRes = await put(
-  'url', // URL
-  'content', // Content
+  'pubky://z4e8s17cou9qmuwen8p1556jzhf1wktmzo6ijsfnri9c4hnrdfty/pub/synonym.to', // URL
+  { data: 'test content' }, // Content
 );
 if (putRes.isErr()) {
   console.log(putRes.error.message);
@@ -133,7 +135,7 @@ console.log(putRes.value);
 import { get } from '@synonymdev/react-native-pubky';
 
 const getRes = await get(
-  'url' // URL
+  'pubky://z4e8s17cou9qmuwen8p1556jzhf1wktmzo6ijsfnri9c4hnrdfty/pub/synonym.to' // URL
 );
 if (getRes.isErr()) {
   console.log(getRes.error.message);
@@ -147,7 +149,7 @@ console.log(getRes.value);
 import { list } from '@synonymdev/react-native-pubky';
 
 const listRes = await list(
-  'url' // URL
+  'pubky://z4e8s17cou9qmuwen8p1556jzhf1wktmzo6ijsfnri9c4hnrdfty/pub/' // URL
 );
 if (listRes.isErr()) {
   console.log(listRes.error.message);
@@ -178,6 +180,49 @@ if (getPublicKeyFromSecretKeyRes.isErr()) {
   return;
 }
 console.log(getPublicKeyFromSecretKeyRes.value);
+```
+
+### <a name="signUp"></a>signUp
+```js
+import { signUp } from '@synonymdev/react-native-pubky';
+
+const signUpRes = await signUp(
+  'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', // Secret
+  'pubky://8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo', // Homeserver
+);
+if (signUpRes.isErr()) {
+  console.log(signUpRes.error.message);
+  return;
+}
+console.log(signUpRes.value);
+```
+
+### <a name="signIn"></a>signIn
+```js
+import { signIn } from '@synonymdev/react-native-pubky';
+
+const signInRes = await signIn(
+  'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' // Secret Key
+);
+if (signInRes.isErr()) {
+  console.log(signInRes.error.message);
+  return;
+}
+console.log(signInRes.value);
+```
+
+### <a name="signOut"></a>signIn
+```js
+import { signOut } from '@synonymdev/react-native-pubky';
+
+const signOutRes = await signOut(
+  'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' // Secret Key
+);
+if (signOutRes.isErr()) {
+  console.log(signOutRes.error.message);
+  return;
+}
+console.log(signOutRes.value);
 ```
 
 ## Local Installation

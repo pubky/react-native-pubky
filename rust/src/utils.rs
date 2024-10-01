@@ -201,3 +201,44 @@ pub fn resource_record_to_json(record: &ResourceRecord) -> Result<serde_json::Va
         "cache_flush": record.cache_flush
     }))
 }
+
+pub fn construct_pubky_url(public_key: &str, domain: &str, path_segments: &[&str]) -> String {
+    // Construct the base URL
+    let mut url = format!("pubky://{}/pub/{}", public_key, domain);
+
+    // Append each path segment, separated by '/'
+    for segment in path_segments {
+        if !segment.is_empty() {
+            url.push('/');
+            url.push_str(segment);
+        }
+    }
+
+    // Remove trailing slash if present
+    if url.ends_with('/') {
+        url.pop();
+    }
+
+    url
+}
+
+/**
+* Extract everything up to the first instance of "pub/" in a Pubky URL
+*
+* # Arguments
+* * `full_url` - The full URL
+*
+* # Returns
+* * `Some(String)` - The "pub/" part of the URL
+* * `None` - If "pub/" is not found in the URL
+*/
+pub fn get_list_url(full_url: &str) -> Option<String> {
+    if let Some(index) = full_url.find("pub/") {
+        let end_index = index + "pub/".len();
+        let substring = &full_url[..end_index];
+        Some(substring.to_string())
+    } else {
+        // "pub/" not found in the string
+        None
+    }
+}

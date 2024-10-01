@@ -16,6 +16,11 @@ import {
   getPublicKeyFromSecretKey,
 } from '@synonymdev/react-native-pubky';
 
+const HOMESERVER = '8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo';
+const SECRET_KEY =
+  'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
+const PUBLIC_KEY = 'z4e8s17cou9qmuwen8p1556jzhf1wktmzo6ijsfnri9c4hnrdfty';
+
 export default function App() {
   return (
     <View style={styles.container}>
@@ -25,7 +30,7 @@ export default function App() {
           try {
             const res = await auth(
               'pubkyauth:///?caps=/pub/pubky.app/:rw,/pub/foo.bar/file:r&secret=U55XnoH6vsMCpx1pxHtt8fReVg4Brvu9C0gUBuw-Jkw&relay=http://167.86.102.121:4173/',
-              'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
+              SECRET_KEY
             );
             if (res.isErr()) {
               console.log(res.error.message);
@@ -61,7 +66,7 @@ export default function App() {
             const res = await publish(
               'recordnametest', // Record Name
               'recordcontenttest', // Record Content
-              'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' // Secret Key
+              SECRET_KEY // Secret Key
             );
             if (res.isErr()) {
               console.log(res.error.message);
@@ -78,7 +83,7 @@ export default function App() {
         onPress={async (): Promise<void> => {
           try {
             const res = await resolve(
-              'z4e8s17cou9qmuwen8p1556jzhf1wktmzo6ijsfnri9c4hnrdfty' // Public key
+              PUBLIC_KEY // Public key
             );
             if (res.isErr()) {
               console.log(res.error.message);
@@ -95,8 +100,8 @@ export default function App() {
         onPress={async (): Promise<void> => {
           try {
             const res = await signUp(
-              'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', // Secret Key
-              'pubky://8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo' // Homeserver
+              SECRET_KEY, // Secret Key
+              `pubky://${HOMESERVER}` // Homeserver
             );
             if (res.isErr()) {
               console.log(res.error.message);
@@ -113,7 +118,7 @@ export default function App() {
         onPress={async (): Promise<void> => {
           try {
             const res = await signIn(
-              'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' // Secret Key
+              SECRET_KEY // Secret Key
             );
             if (res.isErr()) {
               console.log(res.error.message);
@@ -130,7 +135,7 @@ export default function App() {
         onPress={async (): Promise<void> => {
           try {
             const res = await signOut(
-              'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' // Secret Key
+              SECRET_KEY // Secret Key
             );
             if (res.isErr()) {
               console.log(res.error.message);
@@ -146,7 +151,9 @@ export default function App() {
         title={'put'}
         onPress={async (): Promise<void> => {
           try {
-            const res = await put('', { data: 'test data' });
+            const res = await put(`pubky://${PUBLIC_KEY}/pub/synonym.to`, {
+              data: 'test data',
+            });
             if (res.isErr()) {
               console.log(res.error.message);
               return;
@@ -161,7 +168,7 @@ export default function App() {
         title={'get'}
         onPress={async (): Promise<void> => {
           try {
-            const res = await get('');
+            const res = await get(`pubky://${PUBLIC_KEY}/pub/synonym.to`);
             if (res.isErr()) {
               console.log(res.error.message);
               return;
@@ -180,7 +187,7 @@ export default function App() {
             const res = await publishHttps(
               'example.com', // Record Name
               'target.example.com', // Target
-              'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' // Secret Key
+              SECRET_KEY // Secret Key
             );
             if (res.isErr()) {
               console.log(res.error.message);
@@ -198,7 +205,7 @@ export default function App() {
         onPress={async (): Promise<void> => {
           try {
             const res = await resolveHttps(
-              'z4e8s17cou9qmuwen8p1556jzhf1wktmzo6ijsfnri9c4hnrdfty' // Public key
+              PUBLIC_KEY // Public key
             );
             if (res.isErr()) {
               console.log(res.error.message);
@@ -216,7 +223,7 @@ export default function App() {
         onPress={async (): Promise<void> => {
           try {
             const res = await list(
-              'url' // URL
+              `pubky://${PUBLIC_KEY}/pub/synonym.to` // URL
             );
             if (res.isErr()) {
               console.log(res.error.message);
@@ -249,7 +256,7 @@ export default function App() {
         onPress={async (): Promise<void> => {
           try {
             const res = await getPublicKeyFromSecretKey(
-              'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' // Secret Key
+              SECRET_KEY // Secret Key
             );
             if (res.isErr()) {
               console.log(res.error.message);

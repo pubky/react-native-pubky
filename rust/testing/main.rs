@@ -2,10 +2,11 @@ use std::string::ToString;
 use std::sync::Arc;
 use once_cell::sync::Lazy;
 use pkarr::{dns, Keypair, PublicKey, SignedPacket};
+use pkarr::bytes::Bytes;
 use pkarr::dns::rdata::RData;
-use pkarr::mainline::Testnet;
 use pubky::PubkyClient;
 use url::Url;
+use std::str;
 
 static PUBKY_CLIENT: Lazy<Arc<PubkyClient>> = Lazy::new(|| {
     // let custom_testnet = Testnet {
@@ -43,15 +44,55 @@ static PUBKY_CLIENT: Lazy<Arc<PubkyClient>> = Lazy::new(|| {
 const HOMESERVER: &str = "pubky://8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo";
 const SECRET_KEY: &str = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
 
+fn construct_pubky_url(public_key: &str, domain: &str, path_segments: &[&str]) -> String {
+    // Construct the base URL
+    let mut url = format!("pubky://{}/pub/{}", public_key, domain);
+
+    // Append each path segment, separated by '/'
+    for segment in path_segments {
+        if !segment.is_empty() {
+            url.push('/');
+            url.push_str(segment);
+        }
+    }
+
+    // Remove trailing slash if present
+    if url.ends_with('/') {
+        url.pop();
+    }
+
+    url
+}
+
+fn get_list_url(full_url: &str) -> Option<String> {
+    if let Some(index) = full_url.find("pub/") {
+        // Add length of "pub/" to include it in the substring
+        let end_index = index + "pub/".len();
+        let substring = &full_url[..end_index];
+        Some(substring.to_string())
+    } else {
+        // "pub/" not found in the string
+        None
+    }
+}
+
+
+
+
 #[tokio::main]
 async fn main() {
     let sign_in_res = signin_or_signup(SECRET_KEY, HOMESERVER).await;
-    println!("{:?}", sign_in_res);
+    println!("Sign In/Up Response: {:?}", sign_in_res);
     // let res = publish("recordname".to_string(), "recordcontent".to_string(), "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855".to_string()).await;
-    // println!("{:?}", res);
-    let url = "pubky://z4e8s17cou9qmuwen8p1556jzhf1wktmzo6ijsfnri9c4hnrdfty/pub/mydomain.com";
-    let putRes = put(url.to_string(), "content".to_string()).await;
-    println!("{:?}", putRes);
+    // // println!("{:?}", res);
+    let public_key = &sign_in_res[1];
+    let url = construct_pubky_url(public_key, "mydomain.com", &[]);
+    let put_res = put(&url, &"newcontent".to_string()).await;
+    println!("Put Response: {:?}", put_res);
+    let get_res = get(&url).await;
+    println!("Get Response: {:?}", get_res);
+    let list_res = list(url).await;
+    println!("List Response: {:?}", list_res);
 }
 
 pub async fn signin_or_signup(secret_key: &str, homeserver: &str) -> Vec<String> {
@@ -76,7 +117,7 @@ pub async fn sign_up(secret_key: &str, homeserver: &str) -> Vec<String> {
     };
 
     match client.signup(&keypair, &homeserver_public_key).await {
-        Ok(session) => create_response_vector(false, session.pubky().to_uri_string()),
+        Ok(session) => create_response_vector(false, session.pubky().to_string()),
         Err(error) => create_response_vector(true, format!("signup failure: {}", error)),
     }
 }
@@ -89,7 +130,7 @@ pub async fn sign_in(secret_key: &str) -> Vec<String> {
     };
     match client.signin(&keypair).await {
         Ok(session) => {
-            create_response_vector(false, session.pubky().to_uri_string())
+            create_response_vector(false, session.pubky().to_string())
         },
         Err(error) => {
             create_response_vector(true, format!("Failed to sign in: {}", error))
@@ -169,16 +210,73 @@ pub fn create_response_vector(error: bool, data: String) -> Vec<String> {
     }
 }
 
-pub async fn put(url: String, content: String) -> Vec<String> {
+pub async fn put(url: &String, content: &String) -> Vec<String> {
     let client = PUBKY_CLIENT.clone();
-    let parsed_url = match Url::parse(&url) {
+    let trimmed_url = url.trim_end_matches('/');
+    let parsed_url = match Url::parse(&trimmed_url) {
         Ok(url) => url,
         Err(_) => return create_response_vector(true, "Failed to parse URL".to_string()),
     };
     match client.put(parsed_url, &content.as_bytes()).await {
-        Ok(_) => create_response_vector(false, "put success".to_string()),
+        Ok(_) => create_response_vector(false, trimmed_url.to_string()),
         Err(error) => {
             create_response_vector(true, format!("Failed to put: {}", error))
         }
     }
+}
+
+pub async fn get(url: &String) -> Vec<String> {
+    let client = PUBKY_CLIENT.clone();
+    let trimmed_url = url.trim_end_matches('/');
+
+    // Parse the URL and return error early if it fails
+    let parsed_url = match Url::parse(&trimmed_url) {
+        Ok(url) => url,
+        Err(_) => return create_response_vector(true, "Failed to parse URL".to_string()),
+    };
+
+    // Perform the request and return error early if no data is returned
+    let result: Option<Bytes> = match client.get(parsed_url).await {
+        Ok(res) => res,
+        Err(_) => return create_response_vector(true, "Request failed".to_string()),
+    };
+
+    // If there are bytes, attempt to convert to UTF-8
+    let bytes = match result {
+        Some(bytes) => bytes,
+        None => return create_response_vector(true, "No data returned".to_string()),
+    };
+
+    // Try to convert bytes to string and return error if it fails
+    let string = match str::from_utf8(&bytes) {
+        Ok(s) => s.to_string(),
+        Err(_) => return create_response_vector(true, "Invalid UTF-8 sequence".to_string()),
+    };
+
+    // If everything is successful, return the formatted response
+    create_response_vector(false, string)
+}
+
+pub async fn list(url: String) -> Vec<String> {
+    let client = PUBKY_CLIENT.clone();
+    let trimmed_url = url.trim_end_matches('/');
+    let parsed_url = match Url::parse(&trimmed_url) {
+        Ok(url) => url,
+        Err(_) => return create_response_vector(true, "Failed to parse URL".to_string()),
+    };
+    let list_builder = match client.list(parsed_url) {
+        Ok(list) => list,
+        Err(error) => return create_response_vector(true, format!("Failed to list: {}", error)),
+    };
+    // Execute the non-Send part synchronously
+    let send_future = list_builder.send();
+    let send_res = match send_future.await {
+        Ok(res) => res,
+        Err(error) => return create_response_vector(true, format!("Failed to send list request: {}", error))
+    };
+    let json_string = match serde_json::to_string(&send_res) {
+        Ok(json) => json,
+        Err(error) => return create_response_vector(true, format!("Failed to serialize JSON: {}", error)),
+    };
+    create_response_vector(false, json_string)
 }
