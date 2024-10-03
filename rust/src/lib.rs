@@ -478,3 +478,37 @@ pub fn parse_auth_url(url: String) -> Vec<String> {
         Err(error) => create_response_vector(true, error),
     }
 }
+
+#[uniffi::export]
+pub fn create_recovery_file(secret_key: String, passphrase: String,) -> Vec<String> {
+    if secret_key.is_empty() || passphrase.is_empty() {
+        return create_response_vector(true, "Secret key and passphrase must not be empty".to_string());
+    }
+    let keypair = match get_keypair_from_secret_key(&secret_key) {
+        Ok(keypair) => keypair,
+        Err(error) => return create_response_vector(true, error),
+    };
+    let recovery_file_bytes = match PubkyClient::create_recovery_file(&keypair, &passphrase) {
+        Ok(bytes) => bytes,
+        Err(_) => return create_response_vector(true, "Failed to create recovery file".to_string()),
+    };
+    let recovery_file = base64::encode(&recovery_file_bytes);
+    create_response_vector(false, recovery_file)
+}
+
+#[uniffi::export]
+pub fn decrypt_recovery_file(recovery_file: String, passphrase: String) -> Vec<String> {
+    if recovery_file.is_empty() || passphrase.is_empty() {
+        return create_response_vector(true, "Recovery file and passphrase must not be empty".to_string());
+    }
+    let recovery_file_bytes = match base64::decode(&recovery_file) {
+        Ok(bytes) => bytes,
+        Err(error) => return create_response_vector(true, format!("Failed to decode recovery file: {}", error)),
+    };
+    let keypair = match PubkyClient::decrypt_recovery_file(&recovery_file_bytes, &passphrase) {
+        Ok(keypair) => keypair,
+        Err(error) => return create_response_vector(true, "Failed to decrypt recovery file".to_string()),
+    };
+    let secret_key = get_secret_key_from_keypair(&keypair);
+    create_response_vector(false, secret_key)
+}

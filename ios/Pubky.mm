@@ -64,6 +64,16 @@ RCT_EXTERN_METHOD(getPublicKeyFromSecretKey:(NSString *)secretKey
                   withResolver:(RCTPromiseResolveBlock)resolve
                   withRejecter:(RCTPromiseRejectBlock)reject)
 
+RCT_EXTERN_METHOD(createRecoveryFile:(NSString *)secretKey
+                  passphrase:(NSString *)passphrase
+                  withResolver:(RCTPromiseResolveBlock)resolve
+                  withRejecter:(RCTPromiseRejectBlock)reject)
+
+RCT_EXTERN_METHOD(decryptRecoveryFile:(NSString *)recoveryFile
+                  passphrase:(NSString *)passphrase
+                  withResolver:(RCTPromiseResolveBlock)resolve
+                  withRejecter:(RCTPromiseRejectBlock)reject)
+
 + (BOOL)requiresMainQueueSetup
 {
   return NO;

@@ -257,3 +257,33 @@ export async function getPublicKeyFromSecretKey(
     return err(JSON.stringify(e));
   }
 }
+
+export async function createRecoveryFile(
+  secretKey: string,
+  passphrase: string
+): Promise<Result<string>> {
+  try {
+    const res = await Pubky.createRecoveryFile(secretKey, passphrase);
+    if (res[0] === 'error') {
+      return err(res[1]);
+    }
+    return ok(res[1]);
+  } catch (e) {
+    return err(JSON.stringify(e));
+  }
+}
+
+export async function decryptRecoveryFile(
+  recoveryFile: string,
+  passphrase: string
+): Promise<Result<string>> {
+  try {
+    const res = await Pubky.decryptRecoveryFile(recoveryFile, passphrase);
+    if (res[0] === 'error') {
+      return err(res[1]);
+    }
+    return ok(res[1]);
+  } catch (e) {
+    return err(JSON.stringify(e));
+  }
+}

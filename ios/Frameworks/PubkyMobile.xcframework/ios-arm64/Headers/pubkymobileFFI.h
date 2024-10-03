@@ -65,6 +65,10 @@ typedef void (*UniFfiRustFutureContinuation)(void * _Nonnull, int8_t);
 // Scaffolding functions
 RustBuffer uniffi_pubkymobile_fn_func_auth(RustBuffer url, RustBuffer secret_key, RustCallStatus *_Nonnull out_status
 );
+RustBuffer uniffi_pubkymobile_fn_func_create_recovery_file(RustBuffer secret_key, RustBuffer passphrase, RustCallStatus *_Nonnull out_status
+);
+RustBuffer uniffi_pubkymobile_fn_func_decrypt_recovery_file(RustBuffer recovery_file, RustBuffer passphrase, RustCallStatus *_Nonnull out_status
+);
 RustBuffer uniffi_pubkymobile_fn_func_generate_secret_key(RustCallStatus *_Nonnull out_status
     
 );
@@ -207,6 +211,12 @@ void ffi_pubkymobile_rust_future_free_void(void* _Nonnull handle
 void ffi_pubkymobile_rust_future_complete_void(void* _Nonnull handle, RustCallStatus *_Nonnull out_status
 );
 uint16_t uniffi_pubkymobile_checksum_func_auth(void
+    
+);
+uint16_t uniffi_pubkymobile_checksum_func_create_recovery_file(void
+    
+);
+uint16_t uniffi_pubkymobile_checksum_func_decrypt_recovery_file(void
     
 );
 uint16_t uniffi_pubkymobile_checksum_func_generate_secret_key(void

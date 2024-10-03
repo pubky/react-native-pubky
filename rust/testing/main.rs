@@ -44,41 +44,6 @@ static PUBKY_CLIENT: Lazy<Arc<PubkyClient>> = Lazy::new(|| {
 const HOMESERVER: &str = "pubky://8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo";
 const SECRET_KEY: &str = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
 
-fn construct_pubky_url(public_key: &str, domain: &str, path_segments: &[&str]) -> String {
-    // Construct the base URL
-    let mut url = format!("pubky://{}/pub/{}", public_key, domain);
-
-    // Append each path segment, separated by '/'
-    for segment in path_segments {
-        if !segment.is_empty() {
-            url.push('/');
-            url.push_str(segment);
-        }
-    }
-
-    // Remove trailing slash if present
-    if url.ends_with('/') {
-        url.pop();
-    }
-
-    url
-}
-
-fn get_list_url(full_url: &str) -> Option<String> {
-    if let Some(index) = full_url.find("pub/") {
-        // Add length of "pub/" to include it in the substring
-        let end_index = index + "pub/".len();
-        let substring = &full_url[..end_index];
-        Some(substring.to_string())
-    } else {
-        // "pub/" not found in the string
-        None
-    }
-}
-
-
-
-
 #[tokio::main]
 async fn main() {
     let sign_in_res = signin_or_signup(SECRET_KEY, HOMESERVER).await;
@@ -93,7 +58,45 @@ async fn main() {
     println!("Get Response: {:?}", get_res);
     let list_res = list(url).await;
     println!("List Response: {:?}", list_res);
+    let create_response = create_recovery_file(&SECRET_KEY, "password");
+    println!("Create Response: {:?}", create_response);
+    let recovery_file = create_response[1].clone();
+    let decrypt_response = decrypt_recovery_file(&recovery_file, "password");
+    println!("Decrypt Response: {:?}", decrypt_response);
 }
+
+pub fn create_recovery_file(secret_key: &str, passphrase: &str,) -> Vec<String> {
+    if secret_key.is_empty() || passphrase.is_empty() {
+        return create_response_vector(true, "Secret key and passphrase must not be empty".to_string());
+    }
+    let keypair = match get_keypair_from_secret_key(&secret_key) {
+        Ok(keypair) => keypair,
+        Err(error) => return create_response_vector(true, error),
+    };
+    let recovery_file_bytes = match PubkyClient::create_recovery_file(&keypair, &passphrase) {
+        Ok(bytes) => bytes,
+        Err(_) => return create_response_vector(true, "Failed to create recovery file".to_string()),
+    };
+    let recovery_file = base64::encode(&recovery_file_bytes);
+    create_response_vector(false, recovery_file)
+}
+
+pub fn decrypt_recovery_file(recovery_file: &str, passphrase: &str) -> Vec<String> {
+    if recovery_file.is_empty() || passphrase.is_empty() {
+        return create_response_vector(true, "Recovery file and passphrase must not be empty".to_string());
+    }
+    let recovery_file_bytes = match base64::decode(&recovery_file) {
+        Ok(bytes) => bytes,
+        Err(error) => return create_response_vector(true, format!("Failed to decode recovery file: {}", error)),
+    };
+    let keypair = match PubkyClient::decrypt_recovery_file(&recovery_file_bytes, &passphrase) {
+        Ok(keypair) => keypair,
+        Err(error) => return create_response_vector(true, "Failed to decrypt recovery file".to_string()),
+    };
+    let secret_key = get_secret_key_from_keypair(&keypair);
+    create_response_vector(false, secret_key)
+}
+
 
 pub async fn signin_or_signup(secret_key: &str, homeserver: &str) -> Vec<String> {
     let sign_in_res = sign_in(secret_key).await;
@@ -279,4 +282,40 @@ pub async fn list(url: String) -> Vec<String> {
         Err(error) => return create_response_vector(true, format!("Failed to serialize JSON: {}", error)),
     };
     create_response_vector(false, json_string)
+}
+
+fn construct_pubky_url(public_key: &str, domain: &str, path_segments: &[&str]) -> String {
+    // Construct the base URL
+    let mut url = format!("pubky://{}/pub/{}", public_key, domain);
+
+    // Append each path segment, separated by '/'
+    for segment in path_segments {
+        if !segment.is_empty() {
+            url.push('/');
+            url.push_str(segment);
+        }
+    }
+
+    // Remove trailing slash if present
+    if url.ends_with('/') {
+        url.pop();
+    }
+
+    url
+}
+
+fn get_list_url(full_url: &str) -> Option<String> {
+    if let Some(index) = full_url.find("pub/") {
+        // Add length of "pub/" to include it in the substring
+        let end_index = index + "pub/".len();
+        let substring = &full_url[..end_index];
+        Some(substring.to_string())
+    } else {
+        // "pub/" not found in the string
+        None
+    }
+}
+
+pub fn get_secret_key_from_keypair(keypair: &Keypair) -> String {
+    hex::encode(keypair.secret_key())
 }
