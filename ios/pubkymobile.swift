@@ -367,6 +367,26 @@ public func auth(url: String, secretKey: String)  -> [String] {
     )
 }
 
+public func createRecoveryFile(secretKey: String, passphrase: String)  -> [String] {
+    return try!  FfiConverterSequenceString.lift(
+        try! rustCall() {
+    uniffi_pubkymobile_fn_func_create_recovery_file(
+        FfiConverterString.lower(secretKey),
+        FfiConverterString.lower(passphrase),$0)
+}
+    )
+}
+
+public func decryptRecoveryFile(recoveryFile: String, passphrase: String)  -> [String] {
+    return try!  FfiConverterSequenceString.lift(
+        try! rustCall() {
+    uniffi_pubkymobile_fn_func_decrypt_recovery_file(
+        FfiConverterString.lower(recoveryFile),
+        FfiConverterString.lower(passphrase),$0)
+}
+    )
+}
+
 public func generateSecretKey()  -> [String] {
     return try!  FfiConverterSequenceString.lift(
         try! rustCall() {
@@ -505,6 +525,12 @@ private var initializationResult: InitializationResult {
         return InitializationResult.contractVersionMismatch
     }
     if (uniffi_pubkymobile_checksum_func_auth() != 61378) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_pubkymobile_checksum_func_create_recovery_file() != 55903) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_pubkymobile_checksum_func_decrypt_recovery_file() != 59688) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_pubkymobile_checksum_func_generate_secret_key() != 63116) {

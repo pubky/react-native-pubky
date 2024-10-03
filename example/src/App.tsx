@@ -14,6 +14,8 @@ import {
   list,
   generateSecretKey,
   getPublicKeyFromSecretKey,
+  decryptRecoveryFile,
+  createRecoveryFile,
 } from '@synonymdev/react-native-pubky';
 
 const HOMESERVER = '8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo';
@@ -257,6 +259,44 @@ export default function App() {
           try {
             const res = await getPublicKeyFromSecretKey(
               SECRET_KEY // Secret Key
+            );
+            if (res.isErr()) {
+              console.log(res.error.message);
+              return;
+            }
+            console.log(res.value);
+          } catch (e) {
+            console.log(e);
+          }
+        }}
+      />
+
+      <Button
+        title={'Create Recovery File'}
+        onPress={async (): Promise<void> => {
+          try {
+            const res = await createRecoveryFile(
+              SECRET_KEY, // Secret Key
+              'passphrase' // Passphrase
+            );
+            if (res.isErr()) {
+              console.log(res.error.message);
+              return;
+            }
+            console.log(res.value);
+          } catch (e) {
+            console.log(e);
+          }
+        }}
+      />
+
+      <Button
+        title={'Decrypt Recovery File'}
+        onPress={async (): Promise<void> => {
+          try {
+            const res = await decryptRecoveryFile(
+              'cHVia3kub3JnL3JlY292ZXJ5CkZRt1NHIjxyTo0whSSgTgNrH56MPpGrSxvAQSE0x5FeklVJpNJqcNP4zjdwW/OpdBOsEC1qZ5MI/mcEUKFKVAEZwikdclsLZg==', // Recovery File (base64 encoded)
+              'passphrase' // Passphrase
             );
             if (res.isErr()) {
               console.log(res.error.message);

@@ -167,4 +167,24 @@ class Pubky: NSObject {
             }
         }
     }
+
+    @objc(createRecoveryFile:passphrase:withResolver:withRejecter:)
+    func createRecoveryFile(_ secretKey: String, passphrase: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        do {
+            let result = react_native_pubky.createRecoveryFile(secretKey: secretKey, passphrase: passphrase)
+            resolve(result)
+        } catch {
+            reject("createRecoveryFile Error", "Failed to create recovery file", error)
+        }
+    }
+
+    @objc(decryptRecoveryFile:passphrase:withResolver:withRejecter:)
+    func decryptRecoveryFile(_ recoveryFile: String, passphrase: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        do {
+            let result = react_native_pubky.decryptRecoveryFile(recoveryFile: recoveryFile, passphrase: passphrase)
+            resolve(result)
+        } catch {
+            reject("decryptRecoveryFile Error", "Failed to decrypt recovery file", error)
+        }
+    }
 }

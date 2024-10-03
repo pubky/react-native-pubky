@@ -24,6 +24,9 @@ npm install @synonymdev/react-native-pubky
 - [x] [list](#list): Returns a list of Pubky URLs of the files in the path of the `url` provided.
 - [x] [generateSecretKey](#generateSecretKey): Generate a secret key.
 - [x] [getPublicKeyFromSecretKey](#getPublicKeyFromSecretKey): Get the public key string and uri from a secret key.
+- [x] [create_recovery_file](#createRecoveryFile): Create a recovery file.
+- [x] [decrypt_recovery_file](#decryptRecoveryFile): Decrypt a recovery file.
+- 
 ### Methods to be Implemented
 - [ ] getProfile: Retrieve the profile of a user.
 - [ ] editProfile: Submit changes to the specified profile.
@@ -223,6 +226,36 @@ if (signOutRes.isErr()) {
   return;
 }
 console.log(signOutRes.value);
+```
+
+### <a name="createRecoveryFile"></a>createRecoveryFile
+```js
+import { createRecoveryFile } from '@synonymdev/react-native-pubky';
+
+const createRecoveryFileRes = await createRecoveryFile(
+  'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', // Secret Key
+  'passphrase', // Passphrase
+);
+if (createRecoveryFileRes.isErr()) {
+  console.log(createRecoveryFileRes.error.message);
+  return;
+}
+console.log(createRecoveryFileRes.value);
+```
+
+### <a name="decryptRecoveryFile"></a>decryptRecoveryFile
+```js
+import { decryptRecoveryFile } from '@synonymdev/react-native-pubky';
+
+const decryptRecoveryFileRes = await decryptRecoveryFile(
+  'cHVia3kub3JnL3JlY292ZXJ5CkZRt1NHIjxyTo0whSSgTgNrH56MPpGrSxvAQSE0x5FeklVJpNJqcNP4zjdwW/OpdBOsEC1qZ5MI/mcEUKFKVAEZwikdclsLZg==', // Recovery File
+  'passphrase', // Passphrase
+);
+if (decryptRecoveryFileRes.isErr()) {
+  console.log(decryptRecoveryFileRes.error.message);
+  return;
+}
+console.log(decryptRecoveryFileRes.value);
 ```
 
 ## Local Installation

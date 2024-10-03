@@ -278,6 +278,32 @@ class PubkyModule(reactContext: ReactApplicationContext) :
       }
   }
 
+@ReactMethod
+fun createRecoveryFile(secretKey: String, passphrase: String, promise: Promise) {
+    try {
+        val result = createRecoveryFile(secretKey, passphrase)
+        val array = Arguments.createArray().apply {
+            result.forEach { pushString(it) }
+        }
+        promise.resolve(array)
+    } catch (e: Exception) {
+        promise.reject("Error", e.message)
+    }
+}
+
+@ReactMethod
+fun decryptRecoveryFile(recoveryFile: String, passphrase: String, promise: Promise) {
+    try {
+        val result = decryptRecoveryFile(recoveryFile, passphrase)
+        val array = Arguments.createArray().apply {
+            result.forEach { pushString(it) }
+        }
+        promise.resolve(array)
+    } catch (e: Exception) {
+        promise.reject("Error", e.message)
+    }
+}
+
   companion object {
     const val NAME = "Pubky"
   }
