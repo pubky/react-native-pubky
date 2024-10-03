@@ -26,7 +26,7 @@ npm install @synonymdev/react-native-pubky
 - [x] [getPublicKeyFromSecretKey](#getPublicKeyFromSecretKey): Get the public key string and uri from a secret key.
 - [x] [create_recovery_file](#createRecoveryFile): Create a recovery file.
 - [x] [decrypt_recovery_file](#decryptRecoveryFile): Decrypt a recovery file.
-- 
+
 ### Methods to be Implemented
 - [ ] getProfile: Retrieve the profile of a user.
 - [ ] editProfile: Submit changes to the specified profile.
