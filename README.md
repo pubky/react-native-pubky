@@ -28,8 +28,8 @@ npm install @synonymdev/react-native-pubky
 - [x] [decrypt_recovery_file](#decryptRecoveryFile): Decrypt a recovery file.
 
 ### Methods to be Implemented
-- [ ] getProfile: Retrieve the profile of a user.
-- [ ] editProfile: Submit changes to the specified profile.
+- [ ] session: Check the current session for a given Pubky in its homeserver.
+- [ ] delete: Delete a file at a path relative to a pubky author.
 
 
 ## Usage
@@ -276,6 +276,16 @@ After making changes to any of the Rust files, the bindings will need to be upda
 
 ```sh
 npm run update-bindings
+```
+
+## Run React Native Example App
+1. Run Homeserver:
+```sh
+cd rust/pubky/pubky-homeserver && cargo run -- --config=./src/config.toml
+```
+2. Run the React Native Example App:
+```sh
+cd example && yarn install && cd ios && pod install && cd ../ && yarn ios
 ```
 
 Finally, ensure that `PubkyModule.kt`, `Pubky.swift`, `Pubky.mm` & `src/index.tsx` are updated accordingly based on the changes made to the Rust files.
