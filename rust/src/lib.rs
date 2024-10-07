@@ -26,9 +26,12 @@ use pkarr::dns::{Packet, ResourceRecord};
 use serde_json::json;
 use utils::*;
 use once_cell::sync::Lazy;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
 use pkarr::bytes::Bytes;
+use pubky_common::session::Session;
 use tokio::runtime::Runtime;
+use tokio::time;
 
 static PUBKY_CLIENT: Lazy<Arc<PubkyClient>> = Lazy::new(|| {
     Arc::new(PubkyClient::testnet())
@@ -39,6 +42,117 @@ static TOKIO_RUNTIME: Lazy<Arc<Runtime>> = Lazy::new(|| {
         Runtime::new().expect("Failed to create Tokio runtime")
     )
 });
+
+// Define the EventListener trait
+#[uniffi::export(callback_interface)]
+pub trait EventListener: Send + Sync {
+    fn on_event_occurred(&self, event_data: String);
+}
+
+#[derive(uniffi::Object)]
+pub struct EventNotifier {
+    listener: Arc<Mutex<Option<Box<dyn EventListener>>>>,
+}
+
+impl EventNotifier {
+    #[uniffi::constructor]
+    pub fn new() -> Self {
+        Self {
+            listener: Arc::new(Mutex::new(None)),
+        }
+    }
+
+    pub fn set_listener(&self, listener: Box<dyn EventListener>) {
+        let mut lock = self.listener.lock().unwrap();
+        *lock = Some(listener);
+    }
+
+    pub fn remove_listener(&self) {
+        let mut lock = self.listener.lock().unwrap();
+        *lock = None;
+    }
+
+    pub fn notify_event(&self, event_data: String) {
+        let lock = self.listener.lock().unwrap();
+        if let Some(listener) = &*lock {
+            listener.on_event_occurred(event_data);
+        }
+    }
+}
+
+static EVENT_NOTIFIER: Lazy<Arc<EventNotifier>> = Lazy::new(|| {
+    Arc::new(EventNotifier::new())
+});
+
+#[uniffi::export]
+pub fn set_event_listener(listener: Box<dyn EventListener>) {
+    EVENT_NOTIFIER.as_ref().set_listener(listener);
+}
+
+#[uniffi::export]
+pub fn remove_event_listener() {
+    EVENT_NOTIFIER.as_ref().remove_listener();
+}
+
+pub fn start_internal_event_loop() {
+    let event_notifier = EVENT_NOTIFIER.clone();
+    let runtime = TOKIO_RUNTIME.clone();
+    runtime.spawn(async move {
+        let mut interval = time::interval(Duration::from_secs(2));
+        loop {
+            interval.tick().await;
+            event_notifier.as_ref().notify_event("Internal event triggered".to_string());
+        }
+    });
+}
+
+#[uniffi::export]
+pub fn delete_file(url: String) -> Vec<String> {
+    let runtime = TOKIO_RUNTIME.clone();
+    runtime.block_on(async {
+        let client = PUBKY_CLIENT.clone();
+        let parsed_url = match Url::parse(&url) {
+            Ok(url) => url,
+            Err(_) => return create_response_vector(true, "Failed to parse URL".to_string()),
+        };
+        match client.delete(parsed_url).await {
+            Ok(_) => create_response_vector(false, "Deleted successfully".to_string()),
+            Err(error) => create_response_vector(true, format!("Failed to delete: {}", error)),
+        }
+    })
+}
+
+#[uniffi::export]
+pub fn session(pubky: String) -> Vec<String> {
+    let runtime = TOKIO_RUNTIME.clone();
+    runtime.block_on(async {
+        let client = PUBKY_CLIENT.clone();
+        let public_key = match PublicKey::try_from(pubky) {
+            Ok(key) => key,
+            Err(error) => return create_response_vector(true, format!("Invalid homeserver public key: {}", error)),
+        };
+        let result = match client.session(&public_key).await {
+            Ok(session) => session,
+            Err(error) => return create_response_vector(true, format!("Failed to get session: {}", error)),
+        };
+        let session: Session = match result {
+            Some(session) => session,
+            None => return create_response_vector(true, "No session returned".to_string()),
+        };
+
+        let json_obj = json!({
+            "pubky": session.pubky().to_string(),
+            "capabilities": session.capabilities().iter().map(|c| c.to_string()).collect::<Vec<String>>(),
+        });
+
+        let json_str = match serde_json::to_string(&json_obj) {
+            Ok(json) => json,
+            Err(e) => return create_response_vector(true, format!("Failed to serialize JSON: {}", e)),
+        };
+
+        create_response_vector(false, json_str)
+    })
+}
 
 #[uniffi::export]
 pub fn generate_secret_key() -> Vec<String> {
@@ -56,6 +170,7 @@ pub fn generate_secret_key() -> Vec<String> {
         Ok(json) => json,
         Err(e) => return create_response_vector(true, format!("Failed to serialize JSON: {}", e)),
     };
+    start_internal_event_loop();
     create_response_vector(false, json_str)
 }
 

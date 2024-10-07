@@ -335,6 +335,240 @@ fileprivate struct FfiConverterString: FfiConverter {
     }
 }
 
+
+public protocol EventNotifierProtocol {
+    
+}
+
+public class EventNotifier: EventNotifierProtocol {
+    fileprivate let pointer: UnsafeMutableRawPointer
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+    required init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+
+    deinit {
+        try! rustCall { uniffi_pubkymobile_fn_free_eventnotifier(pointer, $0) }
+    }
+
+    
+
+    
+    
+}
+
+public struct FfiConverterTypeEventNotifier: FfiConverter {
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = EventNotifier
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> EventNotifier {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if (ptr == nil) {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: EventNotifier, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> EventNotifier {
+        return EventNotifier(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: EventNotifier) -> UnsafeMutableRawPointer {
+        return value.pointer
+    }
+}
+
+
+public func FfiConverterTypeEventNotifier_lift(_ pointer: UnsafeMutableRawPointer) throws -> EventNotifier {
+    return try FfiConverterTypeEventNotifier.lift(pointer)
+}
+
+public func FfiConverterTypeEventNotifier_lower(_ value: EventNotifier) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeEventNotifier.lower(value)
+}
+
+fileprivate extension NSLock {
+    func withLock<T>(f: () throws -> T) rethrows -> T {
+        self.lock()
+        defer { self.unlock() }
+        return try f()
+    }
+}
+
+fileprivate typealias UniFFICallbackHandle = UInt64
+fileprivate class UniFFICallbackHandleMap<T> {
+    private var leftMap: [UniFFICallbackHandle: T] = [:]
+    private var counter: [UniFFICallbackHandle: UInt64] = [:]
+    private var rightMap: [ObjectIdentifier: UniFFICallbackHandle] = [:]
+
+    private let lock = NSLock()
+    private var currentHandle: UniFFICallbackHandle = 0
+    private let stride: UniFFICallbackHandle = 1
+
+    func insert(obj: T) -> UniFFICallbackHandle {
+        lock.withLock {
+            let id = ObjectIdentifier(obj as AnyObject)
+            let handle = rightMap[id] ?? {
+                currentHandle += stride
+                let handle = currentHandle
+                leftMap[handle] = obj
+                rightMap[id] = handle
+                return handle
+            }()
+            counter[handle] = (counter[handle] ?? 0) + 1
+            return handle
+        }
+    }
+
+    func get(handle: UniFFICallbackHandle) -> T? {
+        lock.withLock {
+            leftMap[handle]
+        }
+    }
+
+    func delete(handle: UniFFICallbackHandle) {
+        remove(handle: handle)
+    }
+
+    @discardableResult
+    func remove(handle: UniFFICallbackHandle) -> T? {
+        lock.withLock {
+            defer { counter[handle] = (counter[handle] ?? 1) - 1 }
+            guard counter[handle] == 1 else { return leftMap[handle] }
+            let obj = leftMap.removeValue(forKey: handle)
+            if let obj = obj {
+                rightMap.removeValue(forKey: ObjectIdentifier(obj as AnyObject))
+            }
+            return obj
+        }
+    }
+}
+
+// Magic number for the Rust proxy to call using the same mechanism as every other method,
+// to free the callback once it's dropped by Rust.
+private let IDX_CALLBACK_FREE: Int32 = 0
+// Callback return codes
+private let UNIFFI_CALLBACK_SUCCESS: Int32 = 0
+private let UNIFFI_CALLBACK_ERROR: Int32 = 1
+private let UNIFFI_CALLBACK_UNEXPECTED_ERROR: Int32 = 2
+
+// Declaration and FfiConverters for EventListener Callback Interface
+
+public protocol EventListener : AnyObject {
+    func onEventOccurred(eventData: String) 
+    
+}
+
+// The ForeignCallback that is passed to Rust.
+fileprivate let foreignCallbackCallbackInterfaceEventListener : ForeignCallback =
+    { (handle: UniFFICallbackHandle, method: Int32, argsData: UnsafePointer<UInt8>, argsLen: Int32, out_buf: UnsafeMutablePointer<RustBuffer>) -> Int32 in
+    
+
+    func invokeOnEventOccurred(_ swiftCallbackInterface: EventListener, _ argsData: UnsafePointer<UInt8>, _ argsLen: Int32, _ out_buf: UnsafeMutablePointer<RustBuffer>) throws -> Int32 {
+        var reader = createReader(data: Data(bytes: argsData, count: Int(argsLen)))
+        func makeCall() throws -> Int32 {
+            try swiftCallbackInterface.onEventOccurred(
+                    eventData:  try FfiConverterString.read(from: &reader)
+                    )
+            return UNIFFI_CALLBACK_SUCCESS
+        }
+        return try makeCall()
+    }
+
+
+    switch method {
+        case IDX_CALLBACK_FREE:
+            FfiConverterCallbackInterfaceEventListener.drop(handle: handle)
+            // Sucessful return
+            // See docs of ForeignCallback in `uniffi_core/src/ffi/foreigncallbacks.rs`
+            return UNIFFI_CALLBACK_SUCCESS
+        case 1:
+            let cb: EventListener
+            do {
+                cb = try FfiConverterCallbackInterfaceEventListener.lift(handle)
+            } catch {
+                out_buf.pointee = FfiConverterString.lower("EventListener: Invalid handle")
+                return UNIFFI_CALLBACK_UNEXPECTED_ERROR
+            }
+            do {
+                return try invokeOnEventOccurred(cb, argsData, argsLen, out_buf)
+            } catch let error {
+                out_buf.pointee = FfiConverterString.lower(String(describing: error))
+                return UNIFFI_CALLBACK_UNEXPECTED_ERROR
+            }
+        
+        // This should never happen, because an out of bounds method index won't
+        // ever be used. Once we can catch errors, we should return an InternalError.
+        // https://github.com/mozilla/uniffi-rs/issues/351
+        default:
+            // An unexpected error happened.
+            // See docs of ForeignCallback in `uniffi_core/src/ffi/foreigncallbacks.rs`
+            return UNIFFI_CALLBACK_UNEXPECTED_ERROR
+    }
+}
+
+// FfiConverter protocol for callback interfaces
+fileprivate struct FfiConverterCallbackInterfaceEventListener {
+    private static let initCallbackOnce: () = {
+        // Swift ensures this initializer code will once run once, even when accessed by multiple threads.
+        try! rustCall { (err: UnsafeMutablePointer<RustCallStatus>) in
+            uniffi_pubkymobile_fn_init_callback_eventlistener(foreignCallbackCallbackInterfaceEventListener, err)
+        }
+    }()
+
+    private static func ensureCallbackinitialized() {
+        _ = initCallbackOnce
+    }
+
+    static func drop(handle: UniFFICallbackHandle) {
+        handleMap.remove(handle: handle)
+    }
+
+    private static var handleMap = UniFFICallbackHandleMap<EventListener>()
+}
+
+extension FfiConverterCallbackInterfaceEventListener : FfiConverter {
+    typealias SwiftType = EventListener
+    // We can use Handle as the FfiType because it's a typealias to UInt64
+    typealias FfiType = UniFFICallbackHandle
+
+    public static func lift(_ handle: UniFFICallbackHandle) throws -> SwiftType {
+        ensureCallbackinitialized();
+        guard let callback = handleMap.get(handle: handle) else {
+            throw UniffiInternalError.unexpectedStaleHandle
+        }
+        return callback
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        ensureCallbackinitialized();
+        let handle: UniFFICallbackHandle = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func lower(_ v: SwiftType) -> UniFFICallbackHandle {
+        ensureCallbackinitialized();
+        return handleMap.insert(obj: v)
+    }
+
+    public static func write(_ v: SwiftType, into buf: inout [UInt8]) {
+        ensureCallbackinitialized();
+        writeInt(&buf, lower(v))
+    }
+}
+
 fileprivate struct FfiConverterSequenceString: FfiConverterRustBuffer {
     typealias SwiftType = [String]
 
@@ -383,6 +617,15 @@ public func decryptRecoveryFile(recoveryFile: String, passphrase: String)  -> [S
     uniffi_pubkymobile_fn_func_decrypt_recovery_file(
         FfiConverterString.lower(recoveryFile),
         FfiConverterString.lower(passphrase),$0)
+}
+    )
+}
+
+public func deleteFile(url: String)  -> [String] {
+    return try!  FfiConverterSequenceString.lift(
+        try! rustCall() {
+    uniffi_pubkymobile_fn_func_delete_file(
+        FfiConverterString.lower(url),$0)
 }
     )
 }
@@ -463,6 +706,14 @@ public func put(url: String, content: String)  -> [String] {
     )
 }
 
+public func removeEventListener()  {
+    try! rustCall() {
+    uniffi_pubkymobile_fn_func_remove_event_listener($0)
+}
+}
+
+
+
 public func resolve(publicKey: String)  -> [String] {
     return try!  FfiConverterSequenceString.lift(
         try! rustCall() {
@@ -480,6 +731,24 @@ public func resolveHttps(publicKey: String)  -> [String] {
 }
     )
 }
+
+public func session(pubky: String)  -> [String] {
+    return try!  FfiConverterSequenceString.lift(
+        try! rustCall() {
+    uniffi_pubkymobile_fn_func_session(
+        FfiConverterString.lower(pubky),$0)
+}
+    )
+}
+
+public func setEventListener(listener: EventListener)  {
+    try! rustCall() {
+    uniffi_pubkymobile_fn_func_set_event_listener(
+        FfiConverterCallbackInterfaceEventListener.lower(listener),$0)
+}
+}
+
+
 
 public func signIn(secretKey: String)  -> [String] {
     return try!  FfiConverterSequenceString.lift(
@@ -533,6 +802,9 @@ private var initializationResult: InitializationResult {
     if (uniffi_pubkymobile_checksum_func_decrypt_recovery_file() != 59688) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_pubkymobile_checksum_func_delete_file() != 57905) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_pubkymobile_checksum_func_generate_secret_key() != 63116) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -557,10 +829,19 @@ private var initializationResult: InitializationResult {
     if (uniffi_pubkymobile_checksum_func_put() != 51107) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_pubkymobile_checksum_func_remove_event_listener() != 6794) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_pubkymobile_checksum_func_resolve() != 18303) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_pubkymobile_checksum_func_resolve_https() != 34593) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_pubkymobile_checksum_func_session() != 65177) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_pubkymobile_checksum_func_set_event_listener() != 19468) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_pubkymobile_checksum_func_sign_in() != 21006) {
@@ -570,6 +851,9 @@ private var initializationResult: InitializationResult {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_pubkymobile_checksum_func_sign_up() != 58756) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_pubkymobile_checksum_method_eventlistener_on_event_occurred() != 39865) {
         return InitializationResult.apiChecksumMismatch
     }
 

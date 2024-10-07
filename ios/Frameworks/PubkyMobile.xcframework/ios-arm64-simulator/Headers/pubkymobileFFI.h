@@ -63,11 +63,17 @@ typedef struct RustCallStatus {
 typedef void (*UniFfiRustFutureContinuation)(void * _Nonnull, int8_t);
 
 // Scaffolding functions
+void uniffi_pubkymobile_fn_free_eventnotifier(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+void uniffi_pubkymobile_fn_init_callback_eventlistener(ForeignCallback _Nonnull callback_stub, RustCallStatus *_Nonnull out_status
+);
 RustBuffer uniffi_pubkymobile_fn_func_auth(RustBuffer url, RustBuffer secret_key, RustCallStatus *_Nonnull out_status
 );
 RustBuffer uniffi_pubkymobile_fn_func_create_recovery_file(RustBuffer secret_key, RustBuffer passphrase, RustCallStatus *_Nonnull out_status
 );
 RustBuffer uniffi_pubkymobile_fn_func_decrypt_recovery_file(RustBuffer recovery_file, RustBuffer passphrase, RustCallStatus *_Nonnull out_status
+);
+RustBuffer uniffi_pubkymobile_fn_func_delete_file(RustBuffer url, RustCallStatus *_Nonnull out_status
 );
 RustBuffer uniffi_pubkymobile_fn_func_generate_secret_key(RustCallStatus *_Nonnull out_status
     
@@ -86,9 +92,16 @@ RustBuffer uniffi_pubkymobile_fn_func_publish_https(RustBuffer record_name, Rust
 );
 RustBuffer uniffi_pubkymobile_fn_func_put(RustBuffer url, RustBuffer content, RustCallStatus *_Nonnull out_status
 );
+void uniffi_pubkymobile_fn_func_remove_event_listener(RustCallStatus *_Nonnull out_status
+    
+);
 RustBuffer uniffi_pubkymobile_fn_func_resolve(RustBuffer public_key, RustCallStatus *_Nonnull out_status
 );
 RustBuffer uniffi_pubkymobile_fn_func_resolve_https(RustBuffer public_key, RustCallStatus *_Nonnull out_status
+);
+RustBuffer uniffi_pubkymobile_fn_func_session(RustBuffer pubky, RustCallStatus *_Nonnull out_status
+);
+void uniffi_pubkymobile_fn_func_set_event_listener(uint64_t listener, RustCallStatus *_Nonnull out_status
 );
 RustBuffer uniffi_pubkymobile_fn_func_sign_in(RustBuffer secret_key, RustCallStatus *_Nonnull out_status
 );
@@ -219,6 +232,9 @@ uint16_t uniffi_pubkymobile_checksum_func_create_recovery_file(void
 uint16_t uniffi_pubkymobile_checksum_func_decrypt_recovery_file(void
     
 );
+uint16_t uniffi_pubkymobile_checksum_func_delete_file(void
+    
+);
 uint16_t uniffi_pubkymobile_checksum_func_generate_secret_key(void
     
 );
@@ -243,10 +259,19 @@ uint16_t uniffi_pubkymobile_checksum_func_publish_https(void
 uint16_t uniffi_pubkymobile_checksum_func_put(void
     
 );
+uint16_t uniffi_pubkymobile_checksum_func_remove_event_listener(void
+    
+);
 uint16_t uniffi_pubkymobile_checksum_func_resolve(void
     
 );
 uint16_t uniffi_pubkymobile_checksum_func_resolve_https(void
+    
+);
+uint16_t uniffi_pubkymobile_checksum_func_session(void
+    
+);
+uint16_t uniffi_pubkymobile_checksum_func_set_event_listener(void
     
 );
 uint16_t uniffi_pubkymobile_checksum_func_sign_in(void
@@ -256,6 +281,9 @@ uint16_t uniffi_pubkymobile_checksum_func_sign_out(void
     
 );
 uint16_t uniffi_pubkymobile_checksum_func_sign_up(void
+    
+);
+uint16_t uniffi_pubkymobile_checksum_method_eventlistener_on_event_occurred(void
     
 );
 uint32_t ffi_pubkymobile_uniffi_contract_version(void
