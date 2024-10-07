@@ -18,19 +18,20 @@ npm install @synonymdev/react-native-pubky
 - [x] [resolveHttps](#resolveHttps): Resolve HTTPS records.
 - [x] [signUp](#signUp): Sign-up to a homeserver and update Pkarr accordingly.
 - [x] [signIn](#signIn): Sign-in to a homeserver.
+- [x] [session](#session): Check the current session for a given Pubky in its homeserver.
 - [x] [signOut](#signOut): Sign-out from a homeserver.
 - [x] [put](#put): Upload a small payload to a given path.
 - [x] [get](#get): Download a small payload from a given path relative to a pubky author.
 - [x] [list](#list): Returns a list of Pubky URLs of the files in the path of the `url` provided.
+- [x] [delete](#delete): Delete a file at a path relative to a pubky author.
 - [x] [generateSecretKey](#generateSecretKey): Generate a secret key.
 - [x] [getPublicKeyFromSecretKey](#getPublicKeyFromSecretKey): Get the public key string and uri from a secret key.
 - [x] [create_recovery_file](#createRecoveryFile): Create a recovery file.
 - [x] [decrypt_recovery_file](#decryptRecoveryFile): Decrypt a recovery file.
 
 ### Methods to be Implemented
-- [ ] session: Check the current session for a given Pubky in its homeserver.
-- [ ] delete: Delete a file at a path relative to a pubky author.
-
+- [ ] setProfile: Set profile information for a pubky.
+- [ ] getProfile: Get profile information for a pubky.
 
 ## Usage
 ### <a name="auth"></a>Auth
@@ -161,6 +162,20 @@ if (listRes.isErr()) {
 console.log(listRes.value);
 ```
 
+### <a name="deleteFile"></a>deleteFile
+```js
+import { deleteFile } from '@synonymdev/react-native-pubky';
+
+const deleteFileRes = await deleteFile(
+  'pubky://z4e8s17cou9qmuwen8p1556jzhf1wktmzo6ijsfnri9c4hnrdfty/pub/' // URL
+);
+if (deleteFileRes.isErr()) {
+  console.log(deleteFileRes.error.message);
+  return;
+}
+console.log(deleteFileRes.value);
+```
+
 ### <a name="generateSecretKey"></a>generateSecretKey
 ```js
 import { generateSecretKey } from '@synonymdev/react-native-pubky';
@@ -212,6 +227,20 @@ if (signInRes.isErr()) {
   return;
 }
 console.log(signInRes.value);
+```
+
+### <a name="session"></a>sessionRes
+```js
+import { session } from '@synonymdev/react-native-pubky';
+
+const sessionRes = await session(
+  'z4e8s17cou9qmuwen8p1556jzhf1wktmzo6ijsfnri9c4hnrdfty' // Public Key
+);
+if (sessionRes.isErr()) {
+  console.log(sessionRes.error.message);
+  return;
+}
+console.log(sessionRes.value);
 ```
 
 ### <a name="signOut"></a>signIn

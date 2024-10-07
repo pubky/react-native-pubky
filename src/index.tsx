@@ -1,4 +1,4 @@
-import { NativeModules, Platform } from 'react-native';
+import { NativeModules, Platform, NativeEventEmitter } from 'react-native';
 import { ok, err, type Result } from '@synonymdev/result';
 
 const LINKING_ERROR =
@@ -17,6 +17,30 @@ const Pubky = NativeModules.Pubky
         },
       }
     );
+
+const eventEmitter = new NativeEventEmitter(Pubky);
+
+export async function setEventListener(
+  callback: (eventData: string) => void
+): Promise<Result<void>> {
+  try {
+    await Pubky.setEventListener();
+    eventEmitter.addListener('PubkyEvent', callback);
+    return ok(undefined);
+  } catch (e) {
+    return err(JSON.stringify(e));
+  }
+}
+
+export async function removeEventListener(): Promise<Result<void>> {
+  try {
+    //await Pubky.removeEventListener();
+    eventEmitter.removeAllListeners('PubkyEvent');
+    return ok(undefined);
+  } catch (e) {
+    return err(JSON.stringify(e));
+  }
+}
 
 export async function auth(
   url: string,
@@ -216,6 +240,35 @@ export async function resolveHttps(
 export async function list(url: string): Promise<Result<string[]>> {
   try {
     const res = await Pubky.list(url);
+    if (res[0] === 'error') {
+      return err(res[1]);
+    }
+    return ok(JSON.parse(res[1]));
+  } catch (e) {
+    return err(JSON.stringify(e));
+  }
+}
+
+export async function deleteFile(url: string): Promise<Result<string[]>> {
+  try {
+    const res = await Pubky.deleteFile(url);
+    if (res[0] === 'error') {
+      return err(res[1]);
+    }
+    return ok(res[1]);
+  } catch (e) {
+    return err(JSON.stringify(e));
+  }
+}
+
+interface SessionInfo {
+  pubky: string;
+  capabilities: string[];
+}
+
+export async function session(pubky: string): Promise<Result<SessionInfo>> {
+  try {
+    const res = await Pubky.session(pubky);
     if (res[0] === 'error') {
       return err(res[1]);
     }

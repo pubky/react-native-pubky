@@ -1,7 +1,46 @@
 import Foundation
+import React
 
 @objc(Pubky)
-class Pubky: NSObject {
+class Pubky: RCTEventEmitter {
+
+    override init() {
+        super.init()
+    }
+
+    @objc override static func requiresMainQueueSetup() -> Bool {
+        return false
+    }
+
+    override func supportedEvents() -> [String]! {
+        return ["PubkyEvent"]
+    }
+
+    class EventListenerImpl: EventListener {
+        weak var pubky: Pubky?
+
+        init(pubky: Pubky) {
+            self.pubky = pubky
+        }
+
+        func onEventOccurred(eventData: String) {
+            pubky?.sendEvent(withName: "PubkyEvent", body: eventData)
+        }
+    }
+
+    @objc(setEventListener:withRejecter:)
+    func setEventListener(_ resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        let listener = EventListenerImpl(pubky: self)
+        react_native_pubky.setEventListener(listener: listener)
+        resolve(nil)
+    }
+
+    @objc(removeEventListener:withRejecter:)
+    func removeEventListener(_ resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        react_native_pubky.removeEventListener()
+        resolve(nil)
+    }
+
     @objc(auth:secretKey:withResolver:withRejecter:)
     func auth(_ url: String, secretKey: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
         Task {
@@ -140,6 +179,30 @@ class Pubky: NSObject {
                 resolve(result)
             } catch {
                 reject("list Error", "Failed to list", error)
+            }
+        }
+    }
+
+    @objc(deleteFile:withResolver:withRejecter:)
+    func deleteFile(_ url: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        Task {
+            do {
+                let result = try await react_native_pubky.deleteFile(url: url)
+                resolve(result)
+            } catch {
+                reject("list Error", "Failed to deleteFile", error)
+            }
+        }
+    }
+
+    @objc(session:withResolver:withRejecter:)
+    func session(_ pubky: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        Task {
+            do {
+                let result = react_native_pubky.session(pubky: pubky)
+                resolve(result)
+            } catch {
+                reject("session Error", "Failed to get session", error)
             }
         }
     }

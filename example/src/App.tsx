@@ -1,4 +1,5 @@
 import { StyleSheet, View, Button } from 'react-native';
+import { useEffect } from 'react';
 import {
   auth,
   parseAuthUrl,
@@ -16,6 +17,10 @@ import {
   getPublicKeyFromSecretKey,
   decryptRecoveryFile,
   createRecoveryFile,
+  setEventListener,
+  removeEventListener,
+  session,
+  deleteFile,
 } from '@synonymdev/react-native-pubky';
 
 const HOMESERVER = '8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo';
@@ -24,6 +29,34 @@ const SECRET_KEY =
 const PUBLIC_KEY = 'z4e8s17cou9qmuwen8p1556jzhf1wktmzo6ijsfnri9c4hnrdfty';
 
 export default function App() {
+  useEffect(() => {
+    let cleanupListener: (() => void) | undefined;
+
+    const setupEventListener = async () => {
+      const result = await setEventListener((eventData) => {
+        console.log('Received event:', eventData);
+      });
+
+      if (result.isOk()) {
+        console.log('Event listener set up successfully');
+      } else {
+        console.error('Failed to set up event listener:', result.error);
+      }
+
+      cleanupListener = () => {
+        removeEventListener();
+      };
+    };
+
+    setupEventListener();
+
+    // Cleanup function
+    return () => {
+      if (cleanupListener) {
+        cleanupListener();
+      }
+    };
+  }, []);
   return (
     <View style={styles.container}>
       <Button
@@ -226,6 +259,51 @@ export default function App() {
           try {
             const res = await list(
               `pubky://${PUBLIC_KEY}/pub/synonym.to` // URL
+            );
+            if (res.isErr()) {
+              console.log(res.error.message);
+              return;
+            }
+            console.log(res.value);
+          } catch (e) {
+            console.log(e);
+          }
+        }}
+      />
+      <Button
+        title={'deleteFile'}
+        onPress={async (): Promise<void> => {
+          try {
+            const listRes = await list(
+              `pubky://${PUBLIC_KEY}/pub/synonym.to` // URL
+            );
+            if (listRes.isErr()) {
+              console.log(listRes.error.message);
+              return;
+            }
+            if (!listRes.value.length || !listRes.value[0]) {
+              console.log('No files found');
+              return;
+            }
+            const res = await deleteFile(
+              listRes.value[0] // URL
+            );
+            if (res.isErr()) {
+              console.log(res.error.message);
+              return;
+            }
+            console.log(res.value);
+          } catch (e) {
+            console.log(e);
+          }
+        }}
+      />
+      <Button
+        title={'session'}
+        onPress={async (): Promise<void> => {
+          try {
+            const res = await session(
+              PUBLIC_KEY // Public key
             );
             if (res.isErr()) {
               console.log(res.error.message);
