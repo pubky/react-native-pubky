@@ -299,14 +299,6 @@ git clone git@github.com:pubky/react-native-pubky.git && cd react-native-pubky &
 yarn add path/to/react-native-pubky
 ```
 
-## Update Bindings
-
-After making changes to any of the Rust files, the bindings will need to be updated. To do this, run the following command:
-
-```sh
-npm run update-bindings
-```
-
 ## Run React Native Example App
 1. Run Homeserver:
 ```sh
@@ -315,6 +307,14 @@ cd rust/pubky/pubky-homeserver && cargo run -- --config=./src/config.toml
 2. Run the React Native Example App:
 ```sh
 cd example && yarn install && cd ios && pod install && cd ../ && yarn ios
+```
+
+## Update Bindings
+
+After making changes to any of the Rust files, the bindings will need to be updated. To do this, run the following command:
+
+```sh
+npm run update-bindings
 ```
 
 Finally, ensure that `PubkyModule.kt`, `Pubky.swift`, `Pubky.mm` & `src/index.tsx` are updated accordingly based on the changes made to the Rust files.
