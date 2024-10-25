@@ -309,12 +309,20 @@ cd rust/pubky/pubky-homeserver && cargo run -- --config=./src/config.toml
 cd example && yarn install && cd ios && pod install && cd ../ && yarn ios
 ```
 
-## Update Bindings
+## Download Remote Bindings
 
-After making changes to any of the Rust files, the bindings will need to be updated. To do this, run the following command:
+This command will download the current bindings from the [SDK repo](https://github.com/pubky/pubky-core-mobile-sdk):
 
 ```sh
-npm run update-bindings
+npm run update-remote-bindings
+```
+
+## Setup Local Bindings
+
+This command will download the entire Rust project if it doesn't exist and set up the bindings locally for faster iteration and testing:
+
+```sh
+npm run update-local-bindings
 ```
 
 Finally, ensure that `PubkyModule.kt`, `Pubky.swift`, `Pubky.mm` & `src/index.tsx` are updated accordingly based on the changes made to the Rust files.
