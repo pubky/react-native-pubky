@@ -46,11 +46,15 @@
     "example:ios": "cd example && cd ios && rm -rf Pods && cd ../ && npm i && bundle install && npm run build:ios && npm run ios",
     "example:android": "cd example && npm i && npm run build:android && npm run android",
     "reinstall": "yarn install && npm run clean && npm run prepare",
-    "cargo-build": "cd rust && cargo build && cd pubky && cargo build && cd pubky && cargo build && cd ../ && cd pubky-common && cargo build && cd ../ && cd pubky-homeserver && cargo build && cd ../../../",
-    "update-bindings:ios": "npm run cargo-build && node setup-ios-bindings.js && npm run reinstall",
-    "update-bindings:android": "npm run cargo-build && node setup-android-bindings.js && npm run reinstall",
-    "update-bindings": "npm run reinstall && npm run cargo-build && npm run update-bindings:ios && npm run update-bindings:android",
-    "rebuild": "rm -rf node_modules && cd example && rm -rf node_modules && cd ios && rm -rf Pods Podfile.lock build && cd ../../ && npm run cargo-build && yarn install && npm run update-bindings && cd example && yarn install && bundle install && cd ios && pod install && cd ../ && yarn build:ios && yarn ios"
+    "cargo-build": "yarn install && node setup-rust.js && cd rust && cargo build && cd pubky && cargo build && cd pubky && cargo build && cd ../ && cd pubky-common && cargo build && cd ../ && cd pubky-homeserver && cargo build && cd ../../../",
+    "update-local-bindings:ios": "npm run cargo-build && cd rust && ./build.sh ios && cd ../ && node setup-local-ios-bindings.js && npm run reinstall",
+    "update-local-bindings:android": "npm run cargo-build && cd rust && ./build.sh android && cd ../ && node setup-local-android-bindings.js && npm run reinstall",
+    "update-local-bindings": "npm run reinstall && npm run cargo-build && npm run update-local-bindings:ios && npm run update-local-bindings:android",
+    "rebuild-local": "rm -rf node_modules && cd example && rm -rf node_modules && cd ios && rm -rf Pods Podfile.lock build && cd ../../ && npm run cargo-build && yarn install && npm run update-local-bindings && cd example && yarn install && bundle install && cd ios && pod install && cd ../ && yarn build:ios && yarn ios",
+    "update-remote-bindings:ios": "node setup-remote-ios-bindings.js && npm run reinstall",
+    "update-remote-bindings:android": "node setup-remote-android-bindings.js && npm run reinstall",
+    "update-remote-bindings": "npm run reinstall && npm run update-remote-bindings:ios && npm run update-remote-bindings:android",
+    "rebuild-remote": "rm -rf node_modules && cd example && rm -rf node_modules && cd ios && rm -rf Pods Podfile.lock build && cd ../../ && yarn install && npm run update-remote-bindings && cd example && yarn install && bundle install && cd ios && pod install && cd ../ && yarn build:ios && yarn ios"
   },
   "keywords": [
     "pubky",
@@ -69,7 +73,7 @@
   },
   "homepage": "https://github.com/pubky/react-native-pubky#readme",
   "publishConfig": {
-    "access": "restricted",
+    "access": "public",
     "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {
@@ -93,6 +97,7 @@
     "react-native": "0.75.3",
     "react-native-builder-bob": "^0.30.2",
     "release-it": "^15.0.0",
+    "simple-git": "^3.27.0",
     "turbo": "^1.10.7",
     "typescript": "^5.2.2"
   },
