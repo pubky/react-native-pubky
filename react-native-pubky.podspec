@@ -19,7 +19,7 @@ Pod::Spec.new do |s|
 
   s.source_files = "ios/**/*.{h,m,mm,swift}"
   s.ios.source_files = "ios/**/*.{h,m,mm,swift}"
-  s.ios.vendored_frameworks = "ios/Frameworks/PubkyMobile.xcframework"
+  s.ios.vendored_frameworks = "ios/Frameworks/PubkyCore.xcframework"
 
   s.pod_target_xcconfig = {
       "EXCLUDED_ARCHS[sdk=iphonesimulator*]" => "x86_64"

@@ -1,8 +1,8 @@
 const fs = require('fs').promises;
 const path = require('path');
 
-const ktPath = 'rust/bindings/android/pubkymobile.kt';
-const ktDestinationPath = 'android/src/main/java/uniffi/pubkymobile/';
+const ktPath = 'rust/bindings/android/pubkycore.kt';
+const ktDestinationPath = 'android/src/main/java/uniffi/pubkycore/';
 const jniPath = 'rust/bindings/android/jniLibs';
 const jniDestinationPath = 'android/src/main/jniLibs/';
 
@@ -24,7 +24,7 @@ async function runSetup() {
 
     console.log('Copying Kotlin file...');
     // Copy Kotlin file to destination
-    const ktTargetPath = path.join(ktDestinationPath, 'pubkymobile.kt');
+    const ktTargetPath = path.join(ktDestinationPath, 'pubkycore.kt');
     await fs.copyFile(ktPath, ktTargetPath);
 
     console.log('Copying JNI libraries...');
