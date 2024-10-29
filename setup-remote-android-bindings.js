@@ -4,10 +4,10 @@ const simpleGit = require('simple-git');
 
 // Configuration
 const repoOwner = 'pubky';
-const repoName = 'pubky-core-mobile-sdk';
+const repoName = 'pubky-core-ffi';
 const branch = 'main';
-const ktPath = 'bindings/android/pubkymobile.kt';
-const ktDestinationPath = 'android/src/main/java/uniffi/pubkymobile/';
+const ktPath = 'bindings/android/pubkycore.kt';
+const ktDestinationPath = 'android/src/main/java/uniffi/pubkycore/';
 const jniPath = 'bindings/android/jniLibs';
 const jniDestinationPath = 'android/src/main/jniLibs/';
 const tempDir = 'temp';
@@ -50,7 +50,7 @@ async function runSetup() {
     console.log('Copying Kotlin file...');
     // Copy Kotlin file to destination
     const ktSourcePath = path.join(tempDir, ktPath);
-    const ktTargetPath = path.join(ktDestinationPath, 'pubkymobile.kt');
+    const ktTargetPath = path.join(ktDestinationPath, 'pubkycore.kt');
     await fs.copyFile(ktSourcePath, ktTargetPath);
 
     console.log('Copying JNI libraries...');

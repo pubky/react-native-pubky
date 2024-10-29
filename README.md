@@ -29,10 +29,6 @@ npm install @synonymdev/react-native-pubky
 - [x] [create_recovery_file](#createRecoveryFile): Create a recovery file.
 - [x] [decrypt_recovery_file](#decryptRecoveryFile): Decrypt a recovery file.
 
-### Methods to be Implemented
-- [ ] setProfile: Set profile information for a pubky.
-- [ ] getProfile: Get profile information for a pubky.
-
 ## Usage
 ### <a name="auth"></a>Auth
 ```js

@@ -51,8 +51,8 @@
     "update-local-bindings:android": "npm run cargo-build && cd rust && ./build.sh android && cd ../ && node setup-local-android-bindings.js && npm run reinstall",
     "update-local-bindings": "npm run reinstall && npm run cargo-build && npm run update-local-bindings:ios && npm run update-local-bindings:android",
     "rebuild-local": "rm -rf node_modules && cd example && rm -rf node_modules && cd ios && rm -rf Pods Podfile.lock build && cd ../../ && npm run cargo-build && yarn install && npm run update-local-bindings && cd example && yarn install && bundle install && cd ios && pod install && cd ../ && yarn build:ios && yarn ios",
-    "update-remote-bindings:ios": "node setup-remote-ios-bindings.js && npm run reinstall",
-    "update-remote-bindings:android": "node setup-remote-android-bindings.js && npm run reinstall",
+    "update-remote-bindings:ios": "npm run reinstall && node setup-remote-ios-bindings.js && npm run reinstall",
+    "update-remote-bindings:android": "npm run reinstall && node setup-remote-android-bindings.js && npm run reinstall",
     "update-remote-bindings": "npm run reinstall && npm run update-remote-bindings:ios && npm run update-remote-bindings:android",
     "rebuild-remote": "rm -rf node_modules && cd example && rm -rf node_modules && cd ios && rm -rf Pods Podfile.lock build && cd ../../ && yarn install && npm run update-remote-bindings && cd example && yarn install && bundle install && cd ios && pod install && cd ../ && yarn build:ios && yarn ios"
   },

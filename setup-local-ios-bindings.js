@@ -1,9 +1,9 @@
 const fs = require('fs').promises;
 const path = require('path');
 
-const frameworkPath = 'rust/bindings/ios/PubkyMobile.xcframework';
+const frameworkPath = 'rust/bindings/ios/PubkyCore.xcframework';
 const frameworkDestinationPath = 'ios/Frameworks';
-const swiftFilePath = 'rust/bindings/ios/pubkymobile.swift';
+const swiftFilePath = 'rust/bindings/ios/pubkycore.swift';
 const swiftDestinationPath = 'ios/';
 
 async function runSetup() {
@@ -12,7 +12,7 @@ async function runSetup() {
     // Remove destination directories if they exist
     await Promise.all([
       fs.rm(frameworkDestinationPath, { recursive: true, force: true }),
-      fs.rm('ios/pubkymobile.swift', { recursive: true, force: true }),
+      fs.rm('ios/pubkycore.swift', { recursive: true, force: true }),
     ]);
 
     console.log('Creating directories...');

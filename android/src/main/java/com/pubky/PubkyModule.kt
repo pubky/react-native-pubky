@@ -10,7 +10,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import uniffi.pubkymobile.*
+import uniffi.pubkycore.*
 
 class PubkyModule(reactContext: ReactApplicationContext) :
     ReactContextBaseJavaModule(reactContext) {
