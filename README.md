@@ -1,6 +1,6 @@
 # react-native-pubky
 
-React Native implementation of [pubky](https://github.com/pubky/pubky)
+React Native implementation of [pubky-core](https://github.com/pubky/pubky-core)
 
 ## Installation
 
