@@ -53,12 +53,12 @@ export async function auth(
   return ok(res[1]);
 }
 
-type Capability = {
+export type Capability = {
   path: string;
   permission: string;
 };
 
-type PubkyAuthDetails = {
+export type PubkyAuthDetails = {
   relay: string;
   capabilities: Capability[];
   secret: string;
@@ -95,7 +95,7 @@ export async function publish(
   }
 }
 
-interface ITxt {
+export interface ITxt {
   cache_flush: boolean;
   class: string;
   name: string;
@@ -105,7 +105,7 @@ interface ITxt {
   };
   ttl: number;
 }
-interface IDNSPacket {
+export interface IDNSPacket {
   signed_packet: string;
   public_key: string;
   signature: string;
@@ -208,7 +208,7 @@ export async function publishHttps(
   }
 }
 
-interface IHttpsRecord {
+export interface IHttpsRecord {
   name: string;
   class: string;
   ttl: number;
@@ -218,7 +218,7 @@ interface IHttpsRecord {
   alpn?: string[];
 }
 
-interface IHttpsResolveResult {
+export interface IHttpsResolveResult {
   public_key: string;
   https_records: IHttpsRecord[];
 }
@@ -261,7 +261,7 @@ export async function deleteFile(url: string): Promise<Result<string[]>> {
   }
 }
 
-interface SessionInfo {
+export interface SessionInfo {
   pubky: string;
   capabilities: string[];
 }
@@ -278,11 +278,11 @@ export async function session(pubky: string): Promise<Result<SessionInfo>> {
   }
 }
 
-interface IPublicKeyInfo {
+export interface IPublicKeyInfo {
   public_key: string;
   uri: string;
 }
-interface IGenerateSecretKey extends IPublicKeyInfo {
+export interface IGenerateSecretKey extends IPublicKeyInfo {
   secret_key: string;
 }
 export async function generateSecretKey(): Promise<Result<IGenerateSecretKey>> {
