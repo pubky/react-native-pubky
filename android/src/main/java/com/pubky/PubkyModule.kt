@@ -206,6 +206,25 @@ class PubkyModule(reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
+    fun republishHomeserver(secretKey: String, homeserver: String, promise: Promise) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val result = republishHomeserver(secretKey, homeserver)
+                val array = Arguments.createArray().apply {
+                    result.forEach { pushString(it) }
+                }
+                withContext(Dispatchers.Main) {
+                    promise.resolve(array)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    promise.reject("Error", e.message)
+                }
+            }
+        }
+    }
+
+    @ReactMethod
     fun signIn(secretKey: String, promise: Promise) {
         CoroutineScope(Dispatchers.IO).launch {
             try {

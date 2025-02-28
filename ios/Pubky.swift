@@ -111,6 +111,18 @@ class Pubky: RCTEventEmitter {
         }
     }
 
+    @objc(republishHomeserver:homeserver:withResolver:withRejecter:)
+    func republishHomeserver(_ secretKey: String, homeserver: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        Task {
+            do {
+                let result = try await react_native_pubky.republishHomeserver(secretKey: secretKey, homeserver: homeserver)
+                resolve(result)
+            } catch {
+                reject("republishHomeserver Error", "Failed to republish homeserver", error)
+            }
+        }
+    }
+
     @objc(signIn:withResolver:withRejecter:)
     func signIn(_ secretKey: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
         Task {

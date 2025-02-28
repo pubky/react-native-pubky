@@ -766,6 +766,16 @@ public func removeEventListener()  {
 
 
 
+public func republishHomeserver(secretKey: String, homeserver: String)  -> [String] {
+    return try!  FfiConverterSequenceString.lift(
+        try! rustCall() {
+    uniffi_pubkycore_fn_func_republish_homeserver(
+        FfiConverterString.lower(secretKey),
+        FfiConverterString.lower(homeserver),$0)
+}
+    )
+}
+
 public func resolve(publicKey: String)  -> [String] {
     return try!  FfiConverterSequenceString.lift(
         try! rustCall() {
@@ -895,6 +905,9 @@ private var initializationResult: InitializationResult {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_pubkycore_checksum_func_remove_event_listener() != 23534) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_pubkycore_checksum_func_republish_homeserver() != 63919) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_pubkycore_checksum_func_resolve() != 34317) {

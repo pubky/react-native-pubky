@@ -418,6 +418,8 @@ internal interface _UniFFILib : Library {
     ): RustBuffer.ByValue
     fun uniffi_pubkycore_fn_func_remove_event_listener(_uniffi_out_err: RustCallStatus, 
     ): Unit
+    fun uniffi_pubkycore_fn_func_republish_homeserver(`secretKey`: RustBuffer.ByValue,`homeserver`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
+    ): RustBuffer.ByValue
     fun uniffi_pubkycore_fn_func_resolve(`publicKey`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_pubkycore_fn_func_resolve_https(`publicKey`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
@@ -576,6 +578,8 @@ internal interface _UniFFILib : Library {
     ): Short
     fun uniffi_pubkycore_checksum_func_remove_event_listener(
     ): Short
+    fun uniffi_pubkycore_checksum_func_republish_homeserver(
+    ): Short
     fun uniffi_pubkycore_checksum_func_resolve(
     ): Short
     fun uniffi_pubkycore_checksum_func_resolve_https(
@@ -651,6 +655,9 @@ private fun uniffiCheckApiChecksums(lib: _UniFFILib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_pubkycore_checksum_func_remove_event_listener() != 23534.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_pubkycore_checksum_func_republish_homeserver() != 63919.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_pubkycore_checksum_func_resolve() != 34317.toShort()) {
@@ -1303,6 +1310,14 @@ fun `removeEventListener`() =
     _UniFFILib.INSTANCE.uniffi_pubkycore_fn_func_remove_event_listener(_status)
 }
 
+
+
+fun `republishHomeserver`(`secretKey`: String, `homeserver`: String): List<String> {
+    return FfiConverterSequenceString.lift(
+    rustCall() { _status ->
+    _UniFFILib.INSTANCE.uniffi_pubkycore_fn_func_republish_homeserver(FfiConverterString.lower(`secretKey`),FfiConverterString.lower(`homeserver`),_status)
+})
+}
 
 
 fun `resolve`(`publicKey`: String): List<String> {

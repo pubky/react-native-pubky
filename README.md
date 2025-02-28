@@ -18,6 +18,7 @@ npm install @synonymdev/react-native-pubky
 - [x] [resolveHttps](#resolveHttps): Resolve HTTPS records.
 - [x] [getSignupToken](#getSignupToken): Get a signup token from a homeserver with admin credentials.
 - [x] [signUp](#signUp): Sign-up to a homeserver and update Pkarr accordingly, with optional signup token support.
+- [x] [republishHomeserver](#republishHomeserver): Republish homeserver information to the DHT.
 - [x] [signIn](#signIn): Sign-in to a homeserver.
 - [x] [session](#session): Check the current session for a given Pubky in its homeserver.
 - [x] [signOut](#signOut): Sign-out from a homeserver.
@@ -237,6 +238,21 @@ if (signUpWithTokenRes.isErr()) {
   return;
 }
 console.log(signUpWithTokenRes.value);
+```
+
+### <a name="republishHomeserver"></a>republishHomeserver
+```js
+import { republishHomeserver } from '@synonymdev/react-native-pubky';
+
+const republishRes = await republishHomeserver(
+  'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', // Secret Key
+  'pubky://8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo' // Homeserver
+);
+if (republishRes.isErr()) {
+  console.log(republishRes.error.message);
+  return;
+}
+console.log(republishRes.value); // "Homeserver republished successfully"
 ```
 
 ### <a name="signIn"></a>signIn

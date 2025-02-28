@@ -160,6 +160,21 @@ export async function signUp(
   }
 }
 
+export async function republishHomeserver(
+  secretKey: string,
+  homeserver: string
+): Promise<Result<string>> {
+  try {
+    const res = await Pubky.republishHomeserver(secretKey, homeserver);
+    if (res[0] === 'error') {
+      return err(res[1]);
+    }
+    return ok(res[1]);
+  } catch (e) {
+    return err(JSON.stringify(e));
+  }
+}
+
 export async function signIn(secretKey: string): Promise<Result<SessionInfo>> {
   try {
     const res = await Pubky.signIn(secretKey);

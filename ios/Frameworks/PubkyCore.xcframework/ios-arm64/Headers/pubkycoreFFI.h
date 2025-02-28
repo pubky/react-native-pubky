@@ -97,6 +97,8 @@ RustBuffer uniffi_pubkycore_fn_func_put(RustBuffer url, RustBuffer content, Rust
 void uniffi_pubkycore_fn_func_remove_event_listener(RustCallStatus *_Nonnull out_status
     
 );
+RustBuffer uniffi_pubkycore_fn_func_republish_homeserver(RustBuffer secret_key, RustBuffer homeserver, RustCallStatus *_Nonnull out_status
+);
 RustBuffer uniffi_pubkycore_fn_func_resolve(RustBuffer public_key, RustCallStatus *_Nonnull out_status
 );
 RustBuffer uniffi_pubkycore_fn_func_resolve_https(RustBuffer public_key, RustCallStatus *_Nonnull out_status
@@ -267,6 +269,9 @@ uint16_t uniffi_pubkycore_checksum_func_put(void
     
 );
 uint16_t uniffi_pubkycore_checksum_func_remove_event_listener(void
+    
+);
+uint16_t uniffi_pubkycore_checksum_func_republish_homeserver(void
     
 );
 uint16_t uniffi_pubkycore_checksum_func_resolve(void

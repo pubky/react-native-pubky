@@ -47,6 +47,11 @@ RCT_EXTERN_METHOD(signUp:(NSString *)secretKey
                   withResolver:(RCTPromiseResolveBlock)resolve
                   withRejecter:(RCTPromiseRejectBlock)reject)
 
+RCT_EXTERN_METHOD(republishHomeserver:(NSString *)secretKey
+                  homeserver:(NSString *)homeserver
+                  withResolver:(RCTPromiseResolveBlock)resolve
+                  withRejecter:(RCTPromiseRejectBlock)reject)
+
 RCT_EXTERN_METHOD(signIn:(NSString *)secretKey
                   withResolver:(RCTPromiseResolveBlock)resolve
                   withRejecter:(RCTPromiseRejectBlock)reject)
