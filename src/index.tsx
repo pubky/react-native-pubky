@@ -126,12 +126,31 @@ export async function resolve(publicKey: string): Promise<Result<IDNSPacket>> {
   }
 }
 
+/*
+Returns the signupToken used in signUp
+ */
+export async function getSignupToken(
+  homeserverPubky: string,
+  adminPassword: string
+): Promise<Result<string>> {
+  try {
+    const res = await Pubky.getSignupToken(homeserverPubky, adminPassword);
+    if (res[0] === 'error') {
+      return err(res[1]);
+    }
+    return ok(res[1]);
+  } catch (e) {
+    return err(JSON.stringify(e));
+  }
+}
+
 export async function signUp(
   secretKey: string,
-  homeserver: string
+  homeserver: string,
+  signupToken?: string
 ): Promise<Result<SessionInfo>> {
   try {
-    const res = await Pubky.signUp(secretKey, homeserver);
+    const res = await Pubky.signUp(secretKey, homeserver, signupToken);
     if (res[0] === 'error') {
       return err(res[1]);
     }

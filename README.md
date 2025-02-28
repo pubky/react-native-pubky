@@ -16,7 +16,8 @@ npm install @synonymdev/react-native-pubky
 - [x] [resolve](#resolve): Functionality to resolve content.
 - [x] [publishHttps](#publishHttps): Publish HTTPS records.
 - [x] [resolveHttps](#resolveHttps): Resolve HTTPS records.
-- [x] [signUp](#signUp): Sign-up to a homeserver and update Pkarr accordingly.
+- [x] [getSignupToken](#getSignupToken): Get a signup token from a homeserver with admin credentials.
+- [x] [signUp](#signUp): Sign-up to a homeserver and update Pkarr accordingly, with optional signup token support.
 - [x] [signIn](#signIn): Sign-in to a homeserver.
 - [x] [session](#session): Check the current session for a given Pubky in its homeserver.
 - [x] [signOut](#signOut): Sign-out from a homeserver.
@@ -28,7 +29,6 @@ npm install @synonymdev/react-native-pubky
 - [x] [getPublicKeyFromSecretKey](#getPublicKeyFromSecretKey): Get the public key string and uri from a secret key.
 - [x] [create_recovery_file](#createRecoveryFile): Create a recovery file.
 - [x] [decrypt_recovery_file](#decryptRecoveryFile): Decrypt a recovery file.
-
 ## Usage
 ### <a name="auth"></a>Auth
 ```js
@@ -196,10 +196,26 @@ if (getPublicKeyFromSecretKeyRes.isErr()) {
 console.log(getPublicKeyFromSecretKeyRes.value);
 ```
 
+### <a name="getSignupToken"></a>getSignupToken
+```js
+import { getSignupToken } from '@synonymdev/react-native-pubky';
+
+const getSignupTokenRes = await getSignupToken(
+  '8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo', // Homeserver pubky
+  'admin_password' // Admin Password
+);
+if (getSignupTokenRes.isErr()) {
+  console.log(getSignupTokenRes.error.message);
+  return;
+}
+console.log('Signup Token:', getSignupTokenRes.value);
+```
+
 ### <a name="signUp"></a>signUp
 ```js
 import { signUp } from '@synonymdev/react-native-pubky';
 
+// Standard signup
 const signUpRes = await signUp(
   'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', // Secret
   'pubky://8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo', // Homeserver
@@ -209,6 +225,18 @@ if (signUpRes.isErr()) {
   return;
 }
 console.log(signUpRes.value);
+
+// Signup with token
+const signUpWithTokenRes = await signUp(
+  'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', // Secret
+  'pubky://8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo', // Homeserver
+  'your_signup_token' // Optional signup token
+);
+if (signUpWithTokenRes.isErr()) {
+  console.log(signUpWithTokenRes.error.message);
+  return;
+}
+console.log(signUpWithTokenRes.value);
 ```
 
 ### <a name="signIn"></a>signIn

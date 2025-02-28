@@ -21,6 +21,7 @@ import {
   removeEventListener,
   session,
   deleteFile,
+  getSignupToken,
 } from '@synonymdev/react-native-pubky';
 
 const HOMESERVER = '8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo';
@@ -131,13 +132,36 @@ export default function App() {
           }
         }}
       />
+
+      <Button
+        title={'Get Signup Token'}
+        onPress={async (): Promise<void> => {
+          try {
+            const res = await getSignupToken(
+              HOMESERVER, // Homeserver pubky
+              'admin_password' // Admin Password
+            );
+            if (res.isErr()) {
+              console.log(res.error);
+              return;
+            }
+            console.log('Signup Token:', res.value);
+            // Store this token for use with signUpWithToken
+          } catch (e) {
+            console.log(e);
+          }
+        }}
+      />
+
       <Button
         title={'signup'}
         onPress={async (): Promise<void> => {
           try {
+            const signupToken = 'signup_token';
             const res = await signUp(
               SECRET_KEY, // Secret Key
-              `pubky://${HOMESERVER}` // Homeserver
+              `pubky://${HOMESERVER}`, // Homeserver
+              signupToken
             );
             if (res.isErr()) {
               console.log(res.error.message);

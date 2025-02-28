@@ -1,6 +1,6 @@
 {
   "name": "@synonymdev/react-native-pubky",
-  "version": "0.9.5",
+  "version": "0.10.0",
   "description": "React Native Implementation of Pubky",
   "source": "./src/index.tsx",
   "main": "./lib/commonjs/index.js",
@@ -54,7 +54,7 @@
     "update-remote-bindings:ios": "npm run reinstall && node setup-remote-ios-bindings.js && npm run reinstall",
     "update-remote-bindings:android": "npm run reinstall && node setup-remote-android-bindings.js && npm run reinstall",
     "update-remote-bindings": "npm run reinstall && npm run update-remote-bindings:ios && npm run update-remote-bindings:android",
-    "rebuild-remote": "rm -rf node_modules && cd example && rm -rf node_modules && cd ios && rm -rf Pods Podfile.lock build && cd ../../ && yarn install && npm run update-remote-bindings && cd example && yarn install && bundle install && cd ios && pod install && cd ../ && yarn build:ios && yarn ios"
+    "rebuild-remote": "rm -rf node_modules && cd example && rm -rf node_modules && cd ios && rm -rf Pods Podfile.lock build && cd ../../ && yarn install && npm run update-remote-bindings && cd example && yarn install && bundle install && cd ios && pod install && cd ../ && yarn build:ios && yarn ios --simulator 'iPhone 16 Pro'"
   },
   "keywords": [
     "pubky",

@@ -87,11 +87,23 @@ class Pubky: RCTEventEmitter {
         }
     }
 
-    @objc(signUp:homeserver:withResolver:withRejecter:)
-    func signUp(_ secretKey: String, homeserver: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+    @objc(getSignupToken:adminPassword:withResolver:withRejecter:)
+    func getSignupToken(_ homeserverPubky: String, adminPassword: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
         Task {
             do {
-                let result = try await react_native_pubky.signUp(secretKey: secretKey, homeserver: homeserver)
+                let result = try await react_native_pubky.getSignupToken(homeserverPubky: homeserverPubky, adminPassword: adminPassword)
+                resolve(result)
+            } catch {
+                reject("getSignupToken Error", "Failed to get signup token", error)
+            }
+        }
+    }
+
+    @objc(signUp:homeserver:signupToken:withResolver:withRejecter:)
+    func signUp(_ secretKey: String, homeserver: String, signupToken: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        Task {
+            do {
+                let result = try await react_native_pubky.signUp(secretKey: secretKey, homeserver: homeserver, signupToken: signupToken)
                 resolve(result)
             } catch {
                 reject("signUp Error", "Failed to sign up", error)
