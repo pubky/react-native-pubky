@@ -404,6 +404,8 @@ internal interface _UniFFILib : Library {
     ): RustBuffer.ByValue
     fun uniffi_pubkycore_fn_func_get_public_key_from_secret_key(`secretKey`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
+    fun uniffi_pubkycore_fn_func_get_signup_token(`homeserverPubky`: RustBuffer.ByValue,`adminPassword`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
+    ): RustBuffer.ByValue
     fun uniffi_pubkycore_fn_func_list(`url`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_pubkycore_fn_func_parse_auth_url(`url`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
@@ -428,7 +430,7 @@ internal interface _UniFFILib : Library {
     ): RustBuffer.ByValue
     fun uniffi_pubkycore_fn_func_sign_out(`secretKey`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
-    fun uniffi_pubkycore_fn_func_sign_up(`secretKey`: RustBuffer.ByValue,`homeserver`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
+    fun uniffi_pubkycore_fn_func_sign_up(`secretKey`: RustBuffer.ByValue,`homeserver`: RustBuffer.ByValue,`signupToken`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_pubkycore_fn_func_switch_network(`useTestnet`: Byte,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
@@ -560,6 +562,8 @@ internal interface _UniFFILib : Library {
     ): Short
     fun uniffi_pubkycore_checksum_func_get_public_key_from_secret_key(
     ): Short
+    fun uniffi_pubkycore_checksum_func_get_signup_token(
+    ): Short
     fun uniffi_pubkycore_checksum_func_list(
     ): Short
     fun uniffi_pubkycore_checksum_func_parse_auth_url(
@@ -628,6 +632,9 @@ private fun uniffiCheckApiChecksums(lib: _UniFFILib) {
     if (lib.uniffi_pubkycore_checksum_func_get_public_key_from_secret_key() != 40316.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_pubkycore_checksum_func_get_signup_token() != 47927.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_pubkycore_checksum_func_list() != 43198.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -664,7 +671,7 @@ private fun uniffiCheckApiChecksums(lib: _UniFFILib) {
     if (lib.uniffi_pubkycore_checksum_func_sign_out() != 34903.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_pubkycore_checksum_func_sign_up() != 37999.toShort()) {
+    if (lib.uniffi_pubkycore_checksum_func_sign_up() != 48789.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_pubkycore_checksum_func_switch_network() != 64215.toShort()) {
@@ -1135,6 +1142,35 @@ public object FfiConverterTypeEventListener: FfiConverterCallbackInterface<Event
 
 
 
+public object FfiConverterOptionalString: FfiConverterRustBuffer<String?> {
+    override fun read(buf: ByteBuffer): String? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterString.read(buf)
+    }
+
+    override fun allocationSize(value: String?): Int {
+        if (value == null) {
+            return 1
+        } else {
+            return 1 + FfiConverterString.allocationSize(value)
+        }
+    }
+
+    override fun write(value: String?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterString.write(value, buf)
+        }
+    }
+}
+
+
+
+
 public object FfiConverterSequenceString: FfiConverterRustBuffer<List<String>> {
     override fun read(buf: ByteBuffer): List<String> {
         val len = buf.getInt()
@@ -1209,6 +1245,14 @@ fun `getPublicKeyFromSecretKey`(`secretKey`: String): List<String> {
     return FfiConverterSequenceString.lift(
     rustCall() { _status ->
     _UniFFILib.INSTANCE.uniffi_pubkycore_fn_func_get_public_key_from_secret_key(FfiConverterString.lower(`secretKey`),_status)
+})
+}
+
+
+fun `getSignupToken`(`homeserverPubky`: String, `adminPassword`: String): List<String> {
+    return FfiConverterSequenceString.lift(
+    rustCall() { _status ->
+    _UniFFILib.INSTANCE.uniffi_pubkycore_fn_func_get_signup_token(FfiConverterString.lower(`homeserverPubky`),FfiConverterString.lower(`adminPassword`),_status)
 })
 }
 
@@ -1309,10 +1353,10 @@ fun `signOut`(`secretKey`: String): List<String> {
 }
 
 
-fun `signUp`(`secretKey`: String, `homeserver`: String): List<String> {
+fun `signUp`(`secretKey`: String, `homeserver`: String, `signupToken`: String?): List<String> {
     return FfiConverterSequenceString.lift(
     rustCall() { _status ->
-    _UniFFILib.INSTANCE.uniffi_pubkycore_fn_func_sign_up(FfiConverterString.lower(`secretKey`),FfiConverterString.lower(`homeserver`),_status)
+    _UniFFILib.INSTANCE.uniffi_pubkycore_fn_func_sign_up(FfiConverterString.lower(`secretKey`),FfiConverterString.lower(`homeserver`),FfiConverterOptionalString.lower(`signupToken`),_status)
 })
 }
 

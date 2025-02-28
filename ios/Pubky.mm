@@ -36,8 +36,14 @@ RCT_EXTERN_METHOD(resolve:(NSString *)publicKey
                   withResolver:(RCTPromiseResolveBlock)resolve
                   withRejecter:(RCTPromiseRejectBlock)reject)
 
+RCT_EXTERN_METHOD(getSignupToken:(NSString *)homeserverPubky
+                  adminPassword:(NSString *)adminPassword
+                  withResolver:(RCTPromiseResolveBlock)resolve
+                  withRejecter:(RCTPromiseRejectBlock)reject)
+
 RCT_EXTERN_METHOD(signUp:(NSString *)secretKey
                   homeserver:(NSString *)homeserver
+                  signupToken:(NSString *)signupToken
                   withResolver:(RCTPromiseResolveBlock)resolve
                   withRejecter:(RCTPromiseRejectBlock)reject)
 

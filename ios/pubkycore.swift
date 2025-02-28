@@ -590,6 +590,27 @@ extension FfiConverterCallbackInterfaceEventListener : FfiConverter {
     }
 }
 
+fileprivate struct FfiConverterOptionString: FfiConverterRustBuffer {
+    typealias SwiftType = String?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterString.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterString.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
 fileprivate struct FfiConverterSequenceString: FfiConverterRustBuffer {
     typealias SwiftType = [String]
 
@@ -673,6 +694,16 @@ public func getPublicKeyFromSecretKey(secretKey: String)  -> [String] {
         try! rustCall() {
     uniffi_pubkycore_fn_func_get_public_key_from_secret_key(
         FfiConverterString.lower(secretKey),$0)
+}
+    )
+}
+
+public func getSignupToken(homeserverPubky: String, adminPassword: String)  -> [String] {
+    return try!  FfiConverterSequenceString.lift(
+        try! rustCall() {
+    uniffi_pubkycore_fn_func_get_signup_token(
+        FfiConverterString.lower(homeserverPubky),
+        FfiConverterString.lower(adminPassword),$0)
 }
     )
 }
@@ -789,12 +820,13 @@ public func signOut(secretKey: String)  -> [String] {
     )
 }
 
-public func signUp(secretKey: String, homeserver: String)  -> [String] {
+public func signUp(secretKey: String, homeserver: String, signupToken: String?)  -> [String] {
     return try!  FfiConverterSequenceString.lift(
         try! rustCall() {
     uniffi_pubkycore_fn_func_sign_up(
         FfiConverterString.lower(secretKey),
-        FfiConverterString.lower(homeserver),$0)
+        FfiConverterString.lower(homeserver),
+        FfiConverterOptionString.lower(signupToken),$0)
 }
     )
 }
@@ -844,6 +876,9 @@ private var initializationResult: InitializationResult {
     if (uniffi_pubkycore_checksum_func_get_public_key_from_secret_key() != 40316) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_pubkycore_checksum_func_get_signup_token() != 47927) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_pubkycore_checksum_func_list() != 43198) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -880,7 +915,7 @@ private var initializationResult: InitializationResult {
     if (uniffi_pubkycore_checksum_func_sign_out() != 34903) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_pubkycore_checksum_func_sign_up() != 37999) {
+    if (uniffi_pubkycore_checksum_func_sign_up() != 48789) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_pubkycore_checksum_func_switch_network() != 64215) {

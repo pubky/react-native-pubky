@@ -168,10 +168,29 @@ class PubkyModule(reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
-    fun signUp(secretKey: String, homeserver: String, promise: Promise) {
+    fun getSignupToken(homeserverPubky: String, adminPassword: String, promise: Promise) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val result = signUp(secretKey, homeserver)
+                val result = getSignupToken(homeserverPubky, adminPassword)
+                val array = Arguments.createArray().apply {
+                    result.forEach { pushString(it) }
+                }
+                withContext(Dispatchers.Main) {
+                    promise.resolve(array)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    promise.reject("Error", e.message)
+                }
+            }
+        }
+    }
+
+    @ReactMethod
+    fun signUp(secretKey: String, homeserver: String, signupToken: String, promise: Promise) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val result = signUp(secretKey, homeserver, signupToken)
                 val array = Arguments.createArray().apply {
                     result.forEach { pushString(it) }
                 }
