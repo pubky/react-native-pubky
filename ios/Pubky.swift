@@ -274,4 +274,16 @@ class Pubky: RCTEventEmitter {
             reject("decryptRecoveryFile Error", "Failed to decrypt recovery file", error)
         }
     }
+
+    @objc(getHomeserver:withResolver:withRejecter:)
+    func getHomeserver(_ pubky: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        Task {
+            do {
+                let result = try await react_native_pubky.getHomeserver(pubky: pubky)
+                resolve(result)
+            } catch {
+                reject("getHomeserver Error", "Failed to get homeserver", error)
+            }
+        }
+    }
 }

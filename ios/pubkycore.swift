@@ -689,6 +689,15 @@ public func get(url: String)  -> [String] {
     )
 }
 
+public func getHomeserver(pubky: String)  -> [String] {
+    return try!  FfiConverterSequenceString.lift(
+        try! rustCall() {
+    uniffi_pubkycore_fn_func_get_homeserver(
+        FfiConverterString.lower(pubky),$0)
+}
+    )
+}
+
 public func getPublicKeyFromSecretKey(secretKey: String)  -> [String] {
     return try!  FfiConverterSequenceString.lift(
         try! rustCall() {
@@ -881,6 +890,9 @@ private var initializationResult: InitializationResult {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_pubkycore_checksum_func_get() != 6591) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_pubkycore_checksum_func_get_homeserver() != 40658) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_pubkycore_checksum_func_get_public_key_from_secret_key() != 40316) {

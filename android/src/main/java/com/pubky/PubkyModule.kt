@@ -433,6 +433,25 @@ class PubkyModule(reactContext: ReactApplicationContext) :
         }
     }
 
+    @ReactMethod
+    fun getHomeserver(pubky: String, promise: Promise) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val result = getHomeserver(pubky)
+                val array = Arguments.createArray().apply {
+                    result.forEach { pushString(it) }
+                }
+                withContext(Dispatchers.Main) {
+                    promise.resolve(array)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    promise.reject("Error", e.message)
+                }
+            }
+        }
+    }
+
     companion object {
         const val NAME = "Pubky"
     }

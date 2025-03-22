@@ -374,3 +374,15 @@ export async function decryptRecoveryFile(
     return err(JSON.stringify(e));
   }
 }
+
+export async function getHomeserver(pubky: string): Promise<Result<string>> {
+  try {
+    const res = await Pubky.getHomeserver(pubky);
+    if (res[0] === 'error') {
+      return err(res[1]);
+    }
+    return ok(res[1]);
+  } catch (e) {
+    return err(JSON.stringify(e));
+  }
+}

@@ -100,6 +100,10 @@ RCT_EXTERN_METHOD(decryptRecoveryFile:(NSString *)recoveryFile
                   withResolver:(RCTPromiseResolveBlock)resolve
                   withRejecter:(RCTPromiseRejectBlock)reject)
 
+RCT_EXTERN_METHOD(getHomeserver:(NSString *)pubky
+                  withResolver:(RCTPromiseResolveBlock)resolve
+                  withRejecter:(RCTPromiseRejectBlock)reject)
+
 + (BOOL)requiresMainQueueSetup
 {
   return NO;
