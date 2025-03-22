@@ -402,6 +402,8 @@ internal interface _UniFFILib : Library {
     ): RustBuffer.ByValue
     fun uniffi_pubkycore_fn_func_get(`url`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
+    fun uniffi_pubkycore_fn_func_get_homeserver(`pubky`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
+    ): RustBuffer.ByValue
     fun uniffi_pubkycore_fn_func_get_public_key_from_secret_key(`secretKey`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_pubkycore_fn_func_get_signup_token(`homeserverPubky`: RustBuffer.ByValue,`adminPassword`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
@@ -562,6 +564,8 @@ internal interface _UniFFILib : Library {
     ): Short
     fun uniffi_pubkycore_checksum_func_get(
     ): Short
+    fun uniffi_pubkycore_checksum_func_get_homeserver(
+    ): Short
     fun uniffi_pubkycore_checksum_func_get_public_key_from_secret_key(
     ): Short
     fun uniffi_pubkycore_checksum_func_get_signup_token(
@@ -631,6 +635,9 @@ private fun uniffiCheckApiChecksums(lib: _UniFFILib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_pubkycore_checksum_func_get() != 6591.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_pubkycore_checksum_func_get_homeserver() != 40658.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_pubkycore_checksum_func_get_public_key_from_secret_key() != 40316.toShort()) {
@@ -1244,6 +1251,14 @@ fun `get`(`url`: String): List<String> {
     return FfiConverterSequenceString.lift(
     rustCall() { _status ->
     _UniFFILib.INSTANCE.uniffi_pubkycore_fn_func_get(FfiConverterString.lower(`url`),_status)
+})
+}
+
+
+fun `getHomeserver`(`pubky`: String): List<String> {
+    return FfiConverterSequenceString.lift(
+    rustCall() { _status ->
+    _UniFFILib.INSTANCE.uniffi_pubkycore_fn_func_get_homeserver(FfiConverterString.lower(`pubky`),_status)
 })
 }
 

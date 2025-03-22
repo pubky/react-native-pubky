@@ -30,6 +30,7 @@ npm install @synonymdev/react-native-pubky
 - [x] [getPublicKeyFromSecretKey](#getPublicKeyFromSecretKey): Get the public key string and uri from a secret key.
 - [x] [create_recovery_file](#createRecoveryFile): Create a recovery file.
 - [x] [decrypt_recovery_file](#decryptRecoveryFile): Decrypt a recovery file.
+- [x] [getHomeserver](#getHomeserver): Get homeserver URL from a public key.
 ## Usage
 ### <a name="auth"></a>Auth
 ```js
@@ -283,6 +284,20 @@ if (sessionRes.isErr()) {
 console.log(sessionRes.value);
 ```
 
+### <a name="getHomeserver"></a>getHomeserver
+```js
+import { getHomeserver } from '@synonymdev/react-native-pubky';
+
+const getHomeserverRes = await getHomeserver(
+  'z4e8s17cou9qmuwen8p1556jzhf1wktmzo6ijsfnri9c4hnrdfty' // Public Key
+);
+if (getHomeserverRes.isErr()) {
+  console.log(getHomeserverRes.error.message);
+  return;
+}
+console.log(getHomeserverRes.value);
+```
+
 ### <a name="signOut"></a>signIn
 ```js
 import { signOut } from '@synonymdev/react-native-pubky';
@@ -378,4 +393,3 @@ MIT
 - Project created with: [create-react-native-library](https://github.com/callstack/react-native-builder-bob)
 - [Building an Android App with Rust Using UniFFI](https://forgen.tech/en/blog/post/building-an-android-app-with-rust-using-uniffi)
 - [Building an iOS App with Rust Using UniFFI](https://forgen.tech/en/blog/post/building-an-ios-app-with-rust-using-uniffi)
-

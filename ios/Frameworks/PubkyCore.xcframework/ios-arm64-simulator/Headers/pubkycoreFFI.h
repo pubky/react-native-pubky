@@ -80,6 +80,8 @@ RustBuffer uniffi_pubkycore_fn_func_generate_secret_key(RustCallStatus *_Nonnull
 );
 RustBuffer uniffi_pubkycore_fn_func_get(RustBuffer url, RustCallStatus *_Nonnull out_status
 );
+RustBuffer uniffi_pubkycore_fn_func_get_homeserver(RustBuffer pubky, RustCallStatus *_Nonnull out_status
+);
 RustBuffer uniffi_pubkycore_fn_func_get_public_key_from_secret_key(RustBuffer secret_key, RustCallStatus *_Nonnull out_status
 );
 RustBuffer uniffi_pubkycore_fn_func_get_signup_token(RustBuffer homeserver_pubky, RustBuffer admin_password, RustCallStatus *_Nonnull out_status
@@ -245,6 +247,9 @@ uint16_t uniffi_pubkycore_checksum_func_generate_secret_key(void
     
 );
 uint16_t uniffi_pubkycore_checksum_func_get(void
+    
+);
+uint16_t uniffi_pubkycore_checksum_func_get_homeserver(void
     
 );
 uint16_t uniffi_pubkycore_checksum_func_get_public_key_from_secret_key(void

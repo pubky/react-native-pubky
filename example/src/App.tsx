@@ -22,6 +22,7 @@ import {
   session,
   deleteFile,
   getSignupToken,
+  getHomeserver,
 } from '@synonymdev/react-native-pubky';
 
 const HOMESERVER = '8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo';
@@ -179,6 +180,23 @@ export default function App() {
           try {
             const res = await signIn(
               SECRET_KEY // Secret Key
+            );
+            if (res.isErr()) {
+              console.log(res.error.message);
+              return;
+            }
+            console.log(res.value);
+          } catch (e) {
+            console.log(e);
+          }
+        }}
+      />
+      <Button
+        title={'getHomeserver'}
+        onPress={async (): Promise<void> => {
+          try {
+            const res = await getHomeserver(
+              PUBLIC_KEY // Public key
             );
             if (res.isErr()) {
               console.log(res.error.message);
