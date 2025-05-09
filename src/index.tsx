@@ -199,7 +199,7 @@ export async function signOut(secretKey: string): Promise<Result<string[]>> {
   }
 }
 
-export async function get(url: string): Promise<Result<string[]>> {
+export async function get(url: string): Promise<Result<unknown>> {
   try {
     const res = await Pubky.get(url);
     if (res[0] === 'error') {
