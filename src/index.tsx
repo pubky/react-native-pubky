@@ -199,13 +199,17 @@ export async function signOut(secretKey: string): Promise<Result<string[]>> {
   }
 }
 
-export async function get(url: string): Promise<Result<unknown>> {
+export async function get(url: string): Promise<Result<string>> {
   try {
     const res = await Pubky.get(url);
     if (res[0] === 'error') {
       return err(res[1]);
     }
-    return ok(JSON.parse(res[1]));
+    // Return the raw response directly
+    // It will be either:
+    // - Plain text (for UTF-8 content)
+    // - "base64:..." (for binary content)
+    return ok(res[1]);
   } catch (e) {
     return err(JSON.stringify(e));
   }
