@@ -672,6 +672,22 @@ public func deleteFile(url: String)  -> [String] {
     )
 }
 
+public func generateMnemonicPhrase()  -> [String] {
+    return try!  FfiConverterSequenceString.lift(
+        try! rustCall() {
+    uniffi_pubkycore_fn_func_generate_mnemonic_phrase($0)
+}
+    )
+}
+
+public func generateMnemonicPhraseAndKeypair()  -> [String] {
+    return try!  FfiConverterSequenceString.lift(
+        try! rustCall() {
+    uniffi_pubkycore_fn_func_generate_mnemonic_phrase_and_keypair($0)
+}
+    )
+}
+
 public func generateSecretKey()  -> [String] {
     return try!  FfiConverterSequenceString.lift(
         try! rustCall() {
@@ -722,6 +738,15 @@ public func list(url: String)  -> [String] {
         try! rustCall() {
     uniffi_pubkycore_fn_func_list(
         FfiConverterString.lower(url),$0)
+}
+    )
+}
+
+public func mnemonicPhraseToKeypair(mnemonicPhrase: String)  -> [String] {
+    return try!  FfiConverterSequenceString.lift(
+        try! rustCall() {
+    uniffi_pubkycore_fn_func_mnemonic_phrase_to_keypair(
+        FfiConverterString.lower(mnemonicPhrase),$0)
 }
     )
 }
@@ -859,6 +884,15 @@ public func switchNetwork(useTestnet: Bool)  -> [String] {
     )
 }
 
+public func validateMnemonicPhrase(mnemonicPhrase: String)  -> [String] {
+    return try!  FfiConverterSequenceString.lift(
+        try! rustCall() {
+    uniffi_pubkycore_fn_func_validate_mnemonic_phrase(
+        FfiConverterString.lower(mnemonicPhrase),$0)
+}
+    )
+}
+
 private enum InitializationResult {
     case ok
     case contractVersionMismatch
@@ -886,6 +920,12 @@ private var initializationResult: InitializationResult {
     if (uniffi_pubkycore_checksum_func_delete_file() != 9063) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_pubkycore_checksum_func_generate_mnemonic_phrase() != 2358) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_pubkycore_checksum_func_generate_mnemonic_phrase_and_keypair() != 44395) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_pubkycore_checksum_func_generate_secret_key() != 12800) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -902,6 +942,9 @@ private var initializationResult: InitializationResult {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_pubkycore_checksum_func_list() != 43198) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_pubkycore_checksum_func_mnemonic_phrase_to_keypair() != 45784) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_pubkycore_checksum_func_parse_auth_url() != 27379) {
@@ -944,6 +987,9 @@ private var initializationResult: InitializationResult {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_pubkycore_checksum_func_switch_network() != 64215) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_pubkycore_checksum_func_validate_mnemonic_phrase() != 30362) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_pubkycore_checksum_method_eventlistener_on_event_occurred() != 11531) {

@@ -75,6 +75,12 @@ RustBuffer uniffi_pubkycore_fn_func_decrypt_recovery_file(RustBuffer recovery_fi
 );
 RustBuffer uniffi_pubkycore_fn_func_delete_file(RustBuffer url, RustCallStatus *_Nonnull out_status
 );
+RustBuffer uniffi_pubkycore_fn_func_generate_mnemonic_phrase(RustCallStatus *_Nonnull out_status
+    
+);
+RustBuffer uniffi_pubkycore_fn_func_generate_mnemonic_phrase_and_keypair(RustCallStatus *_Nonnull out_status
+    
+);
 RustBuffer uniffi_pubkycore_fn_func_generate_secret_key(RustCallStatus *_Nonnull out_status
     
 );
@@ -87,6 +93,8 @@ RustBuffer uniffi_pubkycore_fn_func_get_public_key_from_secret_key(RustBuffer se
 RustBuffer uniffi_pubkycore_fn_func_get_signup_token(RustBuffer homeserver_pubky, RustBuffer admin_password, RustCallStatus *_Nonnull out_status
 );
 RustBuffer uniffi_pubkycore_fn_func_list(RustBuffer url, RustCallStatus *_Nonnull out_status
+);
+RustBuffer uniffi_pubkycore_fn_func_mnemonic_phrase_to_keypair(RustBuffer mnemonic_phrase, RustCallStatus *_Nonnull out_status
 );
 RustBuffer uniffi_pubkycore_fn_func_parse_auth_url(RustBuffer url, RustCallStatus *_Nonnull out_status
 );
@@ -116,6 +124,8 @@ RustBuffer uniffi_pubkycore_fn_func_sign_out(RustBuffer secret_key, RustCallStat
 RustBuffer uniffi_pubkycore_fn_func_sign_up(RustBuffer secret_key, RustBuffer homeserver, RustBuffer signup_token, RustCallStatus *_Nonnull out_status
 );
 RustBuffer uniffi_pubkycore_fn_func_switch_network(int8_t use_testnet, RustCallStatus *_Nonnull out_status
+);
+RustBuffer uniffi_pubkycore_fn_func_validate_mnemonic_phrase(RustBuffer mnemonic_phrase, RustCallStatus *_Nonnull out_status
 );
 RustBuffer ffi_pubkycore_rustbuffer_alloc(int32_t size, RustCallStatus *_Nonnull out_status
 );
@@ -243,6 +253,12 @@ uint16_t uniffi_pubkycore_checksum_func_decrypt_recovery_file(void
 uint16_t uniffi_pubkycore_checksum_func_delete_file(void
     
 );
+uint16_t uniffi_pubkycore_checksum_func_generate_mnemonic_phrase(void
+    
+);
+uint16_t uniffi_pubkycore_checksum_func_generate_mnemonic_phrase_and_keypair(void
+    
+);
 uint16_t uniffi_pubkycore_checksum_func_generate_secret_key(void
     
 );
@@ -259,6 +275,9 @@ uint16_t uniffi_pubkycore_checksum_func_get_signup_token(void
     
 );
 uint16_t uniffi_pubkycore_checksum_func_list(void
+    
+);
+uint16_t uniffi_pubkycore_checksum_func_mnemonic_phrase_to_keypair(void
     
 );
 uint16_t uniffi_pubkycore_checksum_func_parse_auth_url(void
@@ -301,6 +320,9 @@ uint16_t uniffi_pubkycore_checksum_func_sign_up(void
     
 );
 uint16_t uniffi_pubkycore_checksum_func_switch_network(void
+    
+);
+uint16_t uniffi_pubkycore_checksum_func_validate_mnemonic_phrase(void
     
 );
 uint16_t uniffi_pubkycore_checksum_method_eventlistener_on_event_occurred(void
