@@ -23,6 +23,10 @@ import {
   deleteFile,
   getSignupToken,
   getHomeserver,
+  generateMnemonicPhrase,
+  mnemonicPhraseToKeypair,
+  generateMnemonicPhraseAndKeypair,
+  validateMnemonicPhrase,
 } from '@synonymdev/react-native-pubky';
 
 const HOMESERVER = '8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo';
@@ -424,6 +428,80 @@ export default function App() {
               return;
             }
             console.log(res.value);
+          } catch (e) {
+            console.log(e);
+          }
+        }}
+      />
+
+      <Button
+        title={'Generate Mnemonic Phrase'}
+        onPress={async (): Promise<void> => {
+          try {
+            const res = await generateMnemonicPhrase();
+            if (res.isErr()) {
+              console.log(res.error.message);
+              return;
+            }
+            console.log('Generated mnemonic:', res.value);
+          } catch (e) {
+            console.log(e);
+          }
+        }}
+      />
+
+      <Button
+        title={'Mnemonic to Keypair'}
+        onPress={async (): Promise<void> => {
+          try {
+            const testMnemonic =
+              'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+            const res = await mnemonicPhraseToKeypair(testMnemonic);
+            if (res.isErr()) {
+              console.log(res.error.message);
+              return;
+            }
+            console.log('Keypair from mnemonic:', res.value);
+          } catch (e) {
+            console.log(e);
+          }
+        }}
+      />
+
+      <Button
+        title={'Generate Mnemonic and Keypair'}
+        onPress={async (): Promise<void> => {
+          try {
+            const res = await generateMnemonicPhraseAndKeypair();
+            if (res.isErr()) {
+              console.log(res.error.message);
+              return;
+            }
+            console.log('Generated mnemonic and keypair:', res.value);
+          } catch (e) {
+            console.log(e);
+          }
+        }}
+      />
+
+      <Button
+        title={'Validate Mnemonic Phrase'}
+        onPress={async (): Promise<void> => {
+          try {
+            const validMnemonic =
+              'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+            const invalidMnemonic = 'invalid invalid invalid';
+
+            const res1 = await validateMnemonicPhrase(validMnemonic);
+            const res2 = await validateMnemonicPhrase(invalidMnemonic);
+
+            if (res1.isErr() || res2.isErr()) {
+              console.log('Error validating mnemonic');
+              return;
+            }
+
+            console.log('Valid mnemonic result:', res1.value);
+            console.log('Invalid mnemonic result:', res2.value);
           } catch (e) {
             console.log(e);
           }

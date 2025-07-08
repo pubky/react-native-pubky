@@ -452,6 +452,82 @@ class PubkyModule(reactContext: ReactApplicationContext) :
         }
     }
 
+    @ReactMethod
+    fun generateMnemonicPhrase(promise: Promise) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val result = generateMnemonicPhrase()
+                val array = Arguments.createArray().apply {
+                    result.forEach { pushString(it) }
+                }
+                withContext(Dispatchers.Main) {
+                    promise.resolve(array)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    promise.reject("Error", e.message)
+                }
+            }
+        }
+    }
+
+    @ReactMethod
+    fun mnemonicPhraseToKeypair(mnemonicPhrase: String, promise: Promise) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val result = mnemonicPhraseToKeypair(mnemonicPhrase)
+                val array = Arguments.createArray().apply {
+                    result.forEach { pushString(it) }
+                }
+                withContext(Dispatchers.Main) {
+                    promise.resolve(array)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    promise.reject("Error", e.message)
+                }
+            }
+        }
+    }
+
+    @ReactMethod
+    fun generateMnemonicPhraseAndKeypair(promise: Promise) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val result = generateMnemonicPhraseAndKeypair()
+                val array = Arguments.createArray().apply {
+                    result.forEach { pushString(it) }
+                }
+                withContext(Dispatchers.Main) {
+                    promise.resolve(array)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    promise.reject("Error", e.message)
+                }
+            }
+        }
+    }
+
+    @ReactMethod
+    fun validateMnemonicPhrase(mnemonicPhrase: String, promise: Promise) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val result = validateMnemonicPhrase(mnemonicPhrase)
+                val array = Arguments.createArray().apply {
+                    result.forEach { pushString(it) }
+                }
+                withContext(Dispatchers.Main) {
+                    promise.resolve(array)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    promise.reject("Error", e.message)
+                }
+            }
+        }
+    }
+
     companion object {
         const val NAME = "Pubky"
     }

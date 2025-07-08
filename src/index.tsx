@@ -390,3 +390,61 @@ export async function getHomeserver(pubky: string): Promise<Result<string>> {
     return err(JSON.stringify(e));
   }
 }
+
+export async function generateMnemonicPhrase(): Promise<Result<string>> {
+  try {
+    const res = await Pubky.generateMnemonicPhrase();
+    if (res[0] === 'error') {
+      return err(res[1]);
+    }
+    return ok(res[1]);
+  } catch (e) {
+    return err(JSON.stringify(e));
+  }
+}
+
+export interface IMnemonicKeypair extends IGenerateSecretKey {
+  mnemonic?: string;
+}
+
+export async function mnemonicPhraseToKeypair(
+  mnemonicPhrase: string
+): Promise<Result<IMnemonicKeypair>> {
+  try {
+    const res = await Pubky.mnemonicPhraseToKeypair(mnemonicPhrase);
+    if (res[0] === 'error') {
+      return err(res[1]);
+    }
+    return ok(JSON.parse(res[1]));
+  } catch (e) {
+    return err(JSON.stringify(e));
+  }
+}
+
+export async function generateMnemonicPhraseAndKeypair(): Promise<
+  Result<IMnemonicKeypair>
+> {
+  try {
+    const res = await Pubky.generateMnemonicPhraseAndKeypair();
+    if (res[0] === 'error') {
+      return err(res[1]);
+    }
+    return ok(JSON.parse(res[1]));
+  } catch (e) {
+    return err(JSON.stringify(e));
+  }
+}
+
+export async function validateMnemonicPhrase(
+  mnemonicPhrase: string
+): Promise<Result<boolean>> {
+  try {
+    const res = await Pubky.validateMnemonicPhrase(mnemonicPhrase);
+    if (res[0] === 'error') {
+      return err(res[1]);
+    }
+    return ok(res[1] === 'true');
+  } catch (e) {
+    return err(JSON.stringify(e));
+  }
+}

@@ -286,4 +286,52 @@ class Pubky: RCTEventEmitter {
             }
         }
     }
+
+    @objc(generateMnemonicPhrase:withRejecter:)
+    func generateMnemonicPhrase(_ resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        Task {
+            do {
+                let result = react_native_pubky.generateMnemonicPhrase()
+                resolve(result)
+            } catch {
+                reject("generateMnemonicPhrase Error", "Failed to generate mnemonic phrase", error)
+            }
+        }
+    }
+
+    @objc(mnemonicPhraseToKeypair:withResolver:withRejecter:)
+    func mnemonicPhraseToKeypair(_ mnemonicPhrase: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        Task {
+            do {
+                let result = react_native_pubky.mnemonicPhraseToKeypair(mnemonicPhrase: mnemonicPhrase)
+                resolve(result)
+            } catch {
+                reject("mnemonicPhraseToKeypair Error", "Failed to convert mnemonic phrase to keypair", error)
+            }
+        }
+    }
+
+    @objc(generateMnemonicPhraseAndKeypair:withRejecter:)
+    func generateMnemonicPhraseAndKeypair(_ resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        Task {
+            do {
+                let result = react_native_pubky.generateMnemonicPhraseAndKeypair()
+                resolve(result)
+            } catch {
+                reject("generateMnemonicPhraseAndKeypair Error", "Failed to generate mnemonic phrase and keypair", error)
+            }
+        }
+    }
+
+    @objc(validateMnemonicPhrase:withResolver:withRejecter:)
+    func validateMnemonicPhrase(_ mnemonicPhrase: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        Task {
+            do {
+                let result = react_native_pubky.validateMnemonicPhrase(mnemonicPhrase: mnemonicPhrase)
+                resolve(result)
+            } catch {
+                reject("validateMnemonicPhrase Error", "Failed to validate mnemonic phrase", error)
+            }
+        }
+    }
 }
