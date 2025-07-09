@@ -404,12 +404,12 @@ export async function generateMnemonicPhrase(): Promise<Result<string>> {
 }
 
 export interface IMnemonicKeypair extends IGenerateSecretKey {
-  mnemonic?: string;
+  mnemonic: string;
 }
 
 export async function mnemonicPhraseToKeypair(
   mnemonicPhrase: string
-): Promise<Result<IMnemonicKeypair>> {
+): Promise<Result<IGenerateSecretKey>> {
   try {
     const res = await Pubky.mnemonicPhraseToKeypair(mnemonicPhrase);
     if (res[0] === 'error') {
