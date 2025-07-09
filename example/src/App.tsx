@@ -1,4 +1,4 @@
-import { StyleSheet, View, Button } from 'react-native';
+import { StyleSheet, Button, ScrollView } from 'react-native';
 import { useEffect } from 'react';
 import {
   auth,
@@ -65,7 +65,10 @@ export default function App() {
     };
   }, []);
   return (
-    <View style={styles.container}>
+    <ScrollView
+      contentContainerStyle={styles.scrollContent}
+      style={styles.container}
+    >
       <Button
         title={'auth'}
         onPress={async (): Promise<void> => {
@@ -507,15 +510,17 @@ export default function App() {
           }
         }}
       />
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+  },
+  scrollContent: {
+    paddingTop: 80,
+    paddingBottom: 100,
   },
   box: {
     width: 60,
