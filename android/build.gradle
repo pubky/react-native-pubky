@@ -26,9 +26,11 @@ def isNewArchitectureEnabled() {
 apply plugin: "com.android.library"
 apply plugin: "kotlin-android"
 
-if (isNewArchitectureEnabled()) {
-  apply plugin: "com.facebook.react"
-}
+// Disable New Architecture plugin for this library to prevent codegen from
+// generating duplicate React Native core classes
+// if (isNewArchitectureEnabled()) {
+//   apply plugin: "com.facebook.react"
+// }
 
 def getExtOrDefault(name) {
   return rootProject.ext.has(name) ? rootProject.ext.get(name) : project.properties["Pubky_" + name]

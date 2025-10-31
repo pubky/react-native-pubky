@@ -187,13 +187,27 @@ export async function signIn(secretKey: string): Promise<Result<SessionInfo>> {
   }
 }
 
-export async function signOut(secretKey: string): Promise<Result<string[]>> {
+export async function signOut(sessionSecret: string): Promise<Result<string>> {
   try {
-    const res = await Pubky.signOut(secretKey);
+    const res = await Pubky.signOut(sessionSecret);
     if (res[0] === 'error') {
       return err(res[1]);
     }
     return ok(res[1]);
+  } catch (e) {
+    return err(JSON.stringify(e));
+  }
+}
+
+export async function revalidateSession(
+  sessionSecret: string
+): Promise<Result<SessionInfo>> {
+  try {
+    const res = await Pubky.revalidateSession(sessionSecret);
+    if (res[0] === 'error') {
+      return err(res[1]);
+    }
+    return ok(JSON.parse(res[1]));
   } catch (e) {
     return err(JSON.stringify(e));
   }
@@ -217,10 +231,11 @@ export async function get(url: string): Promise<Result<string>> {
 
 export async function put(
   url: string,
-  content: Object
+  content: Object,
+  secretKey: string
 ): Promise<Result<string[]>> {
   try {
-    const res = await Pubky.put(url, JSON.stringify(content));
+    const res = await Pubky.put(url, JSON.stringify(content), secretKey);
     if (res[0] === 'error') {
       return err(res[1]);
     }
@@ -287,9 +302,12 @@ export async function list(url: string): Promise<Result<string[]>> {
   }
 }
 
-export async function deleteFile(url: string): Promise<Result<string[]>> {
+export async function deleteFile(
+  url: string,
+  secretKey: string
+): Promise<Result<string[]>> {
   try {
-    const res = await Pubky.deleteFile(url);
+    const res = await Pubky.deleteFile(url, secretKey);
     if (res[0] === 'error') {
       return err(res[1]);
     }
@@ -302,18 +320,7 @@ export async function deleteFile(url: string): Promise<Result<string[]>> {
 export interface SessionInfo {
   pubky: string;
   capabilities: string[];
-}
-
-export async function session(pubky: string): Promise<Result<SessionInfo>> {
-  try {
-    const res = await Pubky.session(pubky);
-    if (res[0] === 'error') {
-      return err(res[1]);
-    }
-    return ok(JSON.parse(res[1]));
-  } catch (e) {
-    return err(JSON.stringify(e));
-  }
+  session_secret: string;
 }
 
 export interface IPublicKeyInfo {

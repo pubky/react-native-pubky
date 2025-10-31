@@ -19,7 +19,6 @@ import {
   createRecoveryFile,
   setEventListener,
   removeEventListener,
-  session,
   deleteFile,
   getSignupToken,
   getHomeserver,
@@ -27,6 +26,7 @@ import {
   mnemonicPhraseToKeypair,
   generateMnemonicPhraseAndKeypair,
   validateMnemonicPhrase,
+  revalidateSession,
 } from '@synonymdev/react-native-pubky';
 
 const HOMESERVER = '8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo';
@@ -219,14 +219,21 @@ export default function App() {
         title={'signout'}
         onPress={async (): Promise<void> => {
           try {
-            const res = await signOut(
-              SECRET_KEY // Secret Key
-            );
+            // First sign in to get a session secret
+            const signInRes = await signIn(SECRET_KEY);
+            if (signInRes.isErr()) {
+              console.log('Sign in failed:', signInRes.error.message);
+              return;
+            }
+            console.log('Signed in, session:', signInRes.value);
+
+            // Now sign out using the session secret
+            const res = await signOut(signInRes.value.session_secret);
             if (res.isErr()) {
               console.log(res.error.message);
               return;
             }
-            console.log(res.value);
+            console.log('Signed out:', res.value);
           } catch (e) {
             console.log(e);
           }
@@ -236,9 +243,11 @@ export default function App() {
         title={'put'}
         onPress={async (): Promise<void> => {
           try {
-            const res = await put(`pubky://${PUBLIC_KEY}/pub/synonym.to`, {
-              data: 'test data',
-            });
+            const res = await put(
+              `pubky://${PUBLIC_KEY}/pub/synonym.to`,
+              { data: 'test data' },
+              SECRET_KEY
+            );
             if (res.isErr()) {
               console.log(res.error.message);
               return;
@@ -336,7 +345,8 @@ export default function App() {
               return;
             }
             const res = await deleteFile(
-              listRes.value[0] // URL
+              listRes.value[0], // URL
+              SECRET_KEY
             );
             if (res.isErr()) {
               console.log(res.error.message);
@@ -349,17 +359,24 @@ export default function App() {
         }}
       />
       <Button
-        title={'session'}
+        title={'revalidateSession'}
         onPress={async (): Promise<void> => {
           try {
-            const res = await session(
-              PUBLIC_KEY // Public key
-            );
-            if (res.isErr()) {
-              console.log(res.error.message);
+            // First sign in to get a session secret
+            const signInRes = await signIn(SECRET_KEY);
+            if (signInRes.isErr()) {
+              console.log('Sign in failed:', signInRes.error.message);
               return;
             }
-            console.log(res.value);
+            console.log('Signed in, session:', signInRes.value);
+
+            // Now revalidate the session
+            const res = await revalidateSession(signInRes.value.session_secret);
+            if (res.isErr()) {
+              console.log('Revalidation failed:', res.error.message);
+              return;
+            }
+            console.log('Session revalidated:', res.value);
           } catch (e) {
             console.log(e);
           }
