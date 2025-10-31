@@ -60,29 +60,10 @@ class PubkyModule(reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
-    fun deleteFile(url: String, promise: Promise) {
+    fun deleteFile(url: String, secretKey: String, promise: Promise) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val result = deleteFile(url)
-                val array = Arguments.createArray().apply {
-                    result.forEach { pushString(it) }
-                }
-                withContext(Dispatchers.Main) {
-                    promise.resolve(array)
-                }
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    promise.reject("Error", e.message)
-                }
-            }
-        }
-    }
-
-    @ReactMethod
-    fun session(pubky: String, promise: Promise) {
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                val result = session(pubky)
+                val result = deleteFile(url, secretKey)
                 val array = Arguments.createArray().apply {
                     result.forEach { pushString(it) }
                 }
@@ -244,10 +225,10 @@ class PubkyModule(reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
-    fun signOut(secretKey: String, promise: Promise) {
+    fun signOut(sessionSecret: String, promise: Promise) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val result = signOut(secretKey)
+                val result = signOut(sessionSecret)
                 val array = Arguments.createArray().apply {
                     result.forEach { pushString(it) }
                 }
@@ -263,10 +244,29 @@ class PubkyModule(reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
-    fun put(url: String, content: String, promise: Promise) {
+    fun revalidateSession(sessionSecret: String, promise: Promise) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val result = put(url, content)
+                val result = revalidateSession(sessionSecret)
+                val array = Arguments.createArray().apply {
+                    result.forEach { pushString(it) }
+                }
+                withContext(Dispatchers.Main) {
+                    promise.resolve(array)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    promise.reject("Error", e.message)
+                }
+            }
+        }
+    }
+
+    @ReactMethod
+    fun put(url: String, content: String, secretKey: String, promise: Promise) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val result = put(url, content, secretKey)
                 val array = Arguments.createArray().apply {
                     result.forEach { pushString(it) }
                 }

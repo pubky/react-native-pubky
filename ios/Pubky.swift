@@ -136,10 +136,10 @@ class Pubky: RCTEventEmitter {
     }
 
     @objc(signOut:withResolver:withRejecter:)
-    func signOut(_ secretKey: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+    func signOut(_ sessionSecret: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
         Task {
             do {
-                let result = try await react_native_pubky.signOut(secretKey: secretKey)
+                let result = try await react_native_pubky.signOut(sessionSecret: sessionSecret)
                 resolve(result)
             } catch {
                 reject("signOut Error", "Failed to sign out", error)
@@ -147,11 +147,23 @@ class Pubky: RCTEventEmitter {
         }
     }
 
-    @objc(put:content:withResolver:withRejecter:)
-    func put(_ url: String, content: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+    @objc(revalidateSession:withResolver:withRejecter:)
+    func revalidateSession(_ sessionSecret: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
         Task {
             do {
-                let result = try await react_native_pubky.put(url: url, content: content)
+                let result = try await react_native_pubky.revalidateSession(sessionSecret: sessionSecret)
+                resolve(result)
+            } catch {
+                reject("revalidateSession Error", "Failed to revalidate session", error)
+            }
+        }
+    }
+
+    @objc(put:content:secretKey:withResolver:withRejecter:)
+    func put(_ url: String, content: String, secretKey: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        Task {
+            do {
+                let result = try await react_native_pubky.put(url: url, content: content, secretKey: secretKey)
                 resolve(result)
             } catch {
                 reject("put Error", "Failed to put", error)
@@ -207,26 +219,14 @@ class Pubky: RCTEventEmitter {
         }
     }
 
-    @objc(deleteFile:withResolver:withRejecter:)
-    func deleteFile(_ url: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+    @objc(deleteFile:secretKey:withResolver:withRejecter:)
+    func deleteFile(_ url: String, secretKey: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
         Task {
             do {
-                let result = try await react_native_pubky.deleteFile(url: url)
+                let result = try await react_native_pubky.deleteFile(url: url, secretKey: secretKey)
                 resolve(result)
             } catch {
                 reject("list Error", "Failed to deleteFile", error)
-            }
-        }
-    }
-
-    @objc(session:withResolver:withRejecter:)
-    func session(_ pubky: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
-        Task {
-            do {
-                let result = react_native_pubky.session(pubky: pubky)
-                resolve(result)
-            } catch {
-                reject("session Error", "Failed to get session", error)
             }
         }
     }

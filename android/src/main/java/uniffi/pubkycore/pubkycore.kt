@@ -3,7 +3,7 @@
 
 @file:Suppress("NAME_SHADOWING")
 
-package uniffi.pubkycore;
+package uniffi.pubkycore
 
 // Common helper code.
 //
@@ -28,44 +28,54 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.CharBuffer
 import java.nio.charset.CodingErrorAction
+import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicLong
-import java.util.concurrent.locks.ReentrantLock
-import kotlin.concurrent.withLock
 
 // This is a helper for safely working with byte buffers returned from the Rust code.
 // A rust-owned buffer is represented by its capacity, its current length, and a
 // pointer to the underlying data.
 
+/**
+ * @suppress
+ */
 @Structure.FieldOrder("capacity", "len", "data")
 open class RustBuffer : Structure() {
-    @JvmField var capacity: Int = 0
-    @JvmField var len: Int = 0
+    // Note: `capacity` and `len` are actually `ULong` values, but JVM only supports signed values.
+    // When dealing with these fields, make sure to call `toULong()`.
+    @JvmField var capacity: Long = 0
+    @JvmField var len: Long = 0
     @JvmField var data: Pointer? = null
 
     class ByValue: RustBuffer(), Structure.ByValue
     class ByReference: RustBuffer(), Structure.ByReference
 
+   internal fun setValue(other: RustBuffer) {
+        capacity = other.capacity
+        len = other.len
+        data = other.data
+    }
+
     companion object {
-        internal fun alloc(size: Int = 0) = rustCall() { status ->
-            _UniFFILib.INSTANCE.ffi_pubkycore_rustbuffer_alloc(size, status)
+        internal fun alloc(size: ULong = 0UL) = uniffiRustCall() { status ->
+            // Note: need to convert the size to a `Long` value to make this work with JVM.
+            UniffiLib.INSTANCE.ffi_pubkycore_rustbuffer_alloc(size.toLong(), status)
         }.also {
             if(it.data == null) {
                throw RuntimeException("RustBuffer.alloc() returned null data pointer (size=${size})")
            }
         }
 
-        internal fun create(capacity: Int, len: Int, data: Pointer?): RustBuffer.ByValue {
+        internal fun create(capacity: ULong, len: ULong, data: Pointer?): RustBuffer.ByValue {
             var buf = RustBuffer.ByValue()
-            buf.capacity = capacity
-            buf.len = len
+            buf.capacity = capacity.toLong()
+            buf.len = len.toLong()
             buf.data = data
             return buf
         }
 
-        internal fun free(buf: RustBuffer.ByValue) = rustCall() { status ->
-            _UniFFILib.INSTANCE.ffi_pubkycore_rustbuffer_free(buf, status)
+        internal fun free(buf: RustBuffer.ByValue) = uniffiRustCall() { status ->
+            UniffiLib.INSTANCE.ffi_pubkycore_rustbuffer_free(buf, status)
         }
     }
 
@@ -81,6 +91,8 @@ open class RustBuffer : Structure() {
  * Required for callbacks taking in an out pointer.
  *
  * Size is the sum of all values in the struct.
+ *
+ * @suppress
  */
 class RustBufferByReference : ByReference(16) {
     /**
@@ -89,9 +101,9 @@ class RustBufferByReference : ByReference(16) {
     fun setValue(value: RustBuffer.ByValue) {
         // NOTE: The offsets are as they are in the C-like struct.
         val pointer = getPointer()
-        pointer.setInt(0, value.capacity)
-        pointer.setInt(4, value.len)
-        pointer.setPointer(8, value.data)
+        pointer.setLong(0, value.capacity)
+        pointer.setLong(8, value.len)
+        pointer.setPointer(16, value.data)
     }
 
     /**
@@ -100,9 +112,9 @@ class RustBufferByReference : ByReference(16) {
     fun getValue(): RustBuffer.ByValue {
         val pointer = getPointer()
         val value = RustBuffer.ByValue()
-        value.writeField("capacity", pointer.getInt(0))
-        value.writeField("len", pointer.getInt(4))
-        value.writeField("data", pointer.getPointer(8))
+        value.writeField("capacity", pointer.getLong(0))
+        value.writeField("len", pointer.getLong(8))
+        value.writeField("data", pointer.getLong(16))
 
         return value
     }
@@ -115,16 +127,20 @@ class RustBufferByReference : ByReference(16) {
 // completeness.
 
 @Structure.FieldOrder("len", "data")
-open class ForeignBytes : Structure() {
+internal open class ForeignBytes : Structure() {
     @JvmField var len: Int = 0
     @JvmField var data: Pointer? = null
 
     class ByValue : ForeignBytes(), Structure.ByValue
 }
-// The FfiConverter interface handles converter types to and from the FFI
-//
-// All implementing objects should be public to support external types.  When a
-// type is external we need to import it's FfiConverter.
+/**
+ * The FfiConverter interface handles converter types to and from the FFI
+ *
+ * All implementing objects should be public to support external types.  When a
+ * type is external we need to import it's FfiConverter.
+ *
+ * @suppress
+ */
 public interface FfiConverter<KotlinType, FfiType> {
     // Convert an FFI type to a Kotlin type
     fun lift(value: FfiType): KotlinType
@@ -143,7 +159,7 @@ public interface FfiConverter<KotlinType, FfiType> {
     // encoding, so we pessimistically allocate the largest size possible (3
     // bytes per codepoint).  Allocating extra bytes is not really a big deal
     // because the `RustBuffer` is short-lived.
-    fun allocationSize(value: KotlinType): Int
+    fun allocationSize(value: KotlinType): ULong
 
     // Write a Kotlin type to a `ByteBuffer`
     fun write(value: KotlinType, buf: ByteBuffer)
@@ -157,11 +173,11 @@ public interface FfiConverter<KotlinType, FfiType> {
     fun lowerIntoRustBuffer(value: KotlinType): RustBuffer.ByValue {
         val rbuf = RustBuffer.alloc(allocationSize(value))
         try {
-            val bbuf = rbuf.data!!.getByteBuffer(0, rbuf.capacity.toLong()).also {
+            val bbuf = rbuf.data!!.getByteBuffer(0, rbuf.capacity).also {
                 it.order(ByteOrder.BIG_ENDIAN)
             }
             write(value, bbuf)
-            rbuf.writeField("len", bbuf.position())
+            rbuf.writeField("len", bbuf.position().toLong())
             return rbuf
         } catch (e: Throwable) {
             RustBuffer.free(rbuf)
@@ -187,38 +203,59 @@ public interface FfiConverter<KotlinType, FfiType> {
     }
 }
 
-// FfiConverter that uses `RustBuffer` as the FfiType
+/**
+ * FfiConverter that uses `RustBuffer` as the FfiType
+ *
+ * @suppress
+ */
 public interface FfiConverterRustBuffer<KotlinType>: FfiConverter<KotlinType, RustBuffer.ByValue> {
     override fun lift(value: RustBuffer.ByValue) = liftFromRustBuffer(value)
     override fun lower(value: KotlinType) = lowerIntoRustBuffer(value)
 }
 // A handful of classes and functions to support the generated data structures.
 // This would be a good candidate for isolating in its own ffi-support lib.
-// Error runtime.
+
+internal const val UNIFFI_CALL_SUCCESS = 0.toByte()
+internal const val UNIFFI_CALL_ERROR = 1.toByte()
+internal const val UNIFFI_CALL_UNEXPECTED_ERROR = 2.toByte()
+
 @Structure.FieldOrder("code", "error_buf")
-internal open class RustCallStatus : Structure() {
+internal open class UniffiRustCallStatus : Structure() {
     @JvmField var code: Byte = 0
     @JvmField var error_buf: RustBuffer.ByValue = RustBuffer.ByValue()
 
-    class ByValue: RustCallStatus(), Structure.ByValue
+    class ByValue: UniffiRustCallStatus(), Structure.ByValue
 
     fun isSuccess(): Boolean {
-        return code == 0.toByte()
+        return code == UNIFFI_CALL_SUCCESS
     }
 
     fun isError(): Boolean {
-        return code == 1.toByte()
+        return code == UNIFFI_CALL_ERROR
     }
 
     fun isPanic(): Boolean {
-        return code == 2.toByte()
+        return code == UNIFFI_CALL_UNEXPECTED_ERROR
+    }
+
+    companion object {
+        fun create(code: Byte, errorBuf: RustBuffer.ByValue): UniffiRustCallStatus.ByValue {
+            val callStatus = UniffiRustCallStatus.ByValue()
+            callStatus.code = code
+            callStatus.error_buf = errorBuf
+            return callStatus
+        }
     }
 }
 
-class InternalException(message: String) : Exception(message)
+class InternalException(message: String) : kotlin.Exception(message)
 
-// Each top-level error class has a companion object that can lift the error from the call status's rust buffer
-interface CallStatusErrorHandler<E> {
+/**
+ * Each top-level error class has a companion object that can lift the error from the call status's rust buffer
+ *
+ * @suppress
+ */
+interface UniffiRustCallStatusErrorHandler<E> {
     fun lift(error_buf: RustBuffer.ByValue): E;
 }
 
@@ -227,15 +264,15 @@ interface CallStatusErrorHandler<E> {
 // synchronize itself
 
 // Call a rust function that returns a Result<>.  Pass in the Error class companion that corresponds to the Err
-private inline fun <U, E: Exception> rustCallWithError(errorHandler: CallStatusErrorHandler<E>, callback: (RustCallStatus) -> U): U {
-    var status = RustCallStatus();
+private inline fun <U, E: kotlin.Exception> uniffiRustCallWithError(errorHandler: UniffiRustCallStatusErrorHandler<E>, callback: (UniffiRustCallStatus) -> U): U {
+    var status = UniffiRustCallStatus()
     val return_value = callback(status)
-    checkCallStatus(errorHandler, status)
+    uniffiCheckCallStatus(errorHandler, status)
     return return_value
 }
 
-// Check RustCallStatus and throw an error if the call wasn't successful
-private fun<E: Exception> checkCallStatus(errorHandler: CallStatusErrorHandler<E>, status: RustCallStatus) {
+// Check UniffiRustCallStatus and throw an error if the call wasn't successful
+private fun<E: kotlin.Exception> uniffiCheckCallStatus(errorHandler: UniffiRustCallStatusErrorHandler<E>, status: UniffiRustCallStatus) {
     if (status.isSuccess()) {
         return
     } else if (status.isError()) {
@@ -254,8 +291,12 @@ private fun<E: Exception> checkCallStatus(errorHandler: CallStatusErrorHandler<E
     }
 }
 
-// CallStatusErrorHandler implementation for times when we don't expect a CALL_ERROR
-object NullCallStatusErrorHandler: CallStatusErrorHandler<InternalException> {
+/**
+ * UniffiRustCallStatusErrorHandler implementation for times when we don't expect a CALL_ERROR
+ *
+ * @suppress
+ */
+object UniffiNullRustCallStatusErrorHandler: UniffiRustCallStatusErrorHandler<InternalException> {
     override fun lift(error_buf: RustBuffer.ByValue): InternalException {
         RustBuffer.free(error_buf)
         return InternalException("Unexpected CALL_ERROR")
@@ -263,95 +304,67 @@ object NullCallStatusErrorHandler: CallStatusErrorHandler<InternalException> {
 }
 
 // Call a rust function that returns a plain value
-private inline fun <U> rustCall(callback: (RustCallStatus) -> U): U {
-    return rustCallWithError(NullCallStatusErrorHandler, callback);
+private inline fun <U> uniffiRustCall(callback: (UniffiRustCallStatus) -> U): U {
+    return uniffiRustCallWithError(UniffiNullRustCallStatusErrorHandler, callback)
 }
 
-// IntegerType that matches Rust's `usize` / C's `size_t`
-public class USize(value: Long = 0) : IntegerType(Native.SIZE_T_SIZE, value, true) {
-    // This is needed to fill in the gaps of IntegerType's implementation of Number for Kotlin.
-    override fun toByte() = toInt().toByte()
-    // Needed until https://youtrack.jetbrains.com/issue/KT-47902 is fixed.
-    @Deprecated("`toInt().toChar()` is deprecated")
-    override fun toChar() = toInt().toChar()
-    override fun toShort() = toInt().toShort()
-
-    fun writeToBuffer(buf: ByteBuffer) {
-        // Make sure we always write usize integers using native byte-order, since they may be
-        // casted to pointer values
-        buf.order(ByteOrder.nativeOrder())
-        try {
-            when (Native.SIZE_T_SIZE) {
-                4 -> buf.putInt(toInt())
-                8 -> buf.putLong(toLong())
-                else -> throw RuntimeException("Invalid SIZE_T_SIZE: ${Native.SIZE_T_SIZE}")
-            }
-        } finally {
-            buf.order(ByteOrder.BIG_ENDIAN)
-        }
-    }
-
-    companion object {
-        val size: Int
-            get() = Native.SIZE_T_SIZE
-
-        fun readFromBuffer(buf: ByteBuffer) : USize {
-            // Make sure we always read usize integers using native byte-order, since they may be
-            // casted from pointer values
-            buf.order(ByteOrder.nativeOrder())
-            try {
-                return when (Native.SIZE_T_SIZE) {
-                    4 -> USize(buf.getInt().toLong())
-                    8 -> USize(buf.getLong())
-                    else -> throw RuntimeException("Invalid SIZE_T_SIZE: ${Native.SIZE_T_SIZE}")
-                }
-            } finally {
-                buf.order(ByteOrder.BIG_ENDIAN)
-            }
-        }
+internal inline fun<T> uniffiTraitInterfaceCall(
+    callStatus: UniffiRustCallStatus,
+    makeCall: () -> T,
+    writeReturn: (T) -> Unit,
+) {
+    try {
+        writeReturn(makeCall())
+    } catch(e: kotlin.Exception) {
+        callStatus.code = UNIFFI_CALL_UNEXPECTED_ERROR
+        callStatus.error_buf = FfiConverterString.lower(e.toString())
     }
 }
 
-
+internal inline fun<T, reified E: Throwable> uniffiTraitInterfaceCallWithError(
+    callStatus: UniffiRustCallStatus,
+    makeCall: () -> T,
+    writeReturn: (T) -> Unit,
+    lowerError: (E) -> RustBuffer.ByValue
+) {
+    try {
+        writeReturn(makeCall())
+    } catch(e: kotlin.Exception) {
+        if (e is E) {
+            callStatus.code = UNIFFI_CALL_ERROR
+            callStatus.error_buf = lowerError(e)
+        } else {
+            callStatus.code = UNIFFI_CALL_UNEXPECTED_ERROR
+            callStatus.error_buf = FfiConverterString.lower(e.toString())
+        }
+    }
+}
 // Map handles to objects
 //
-// This is used when the Rust code expects an opaque pointer to represent some foreign object.
-// Normally we would pass a pointer to the object, but JNA doesn't support getting a pointer from an
-// object reference , nor does it support leaking a reference to Rust.
-//
-// Instead, this class maps USize values to objects so that we can pass a pointer-sized type to
-// Rust when it needs an opaque pointer.
-//
-// TODO: refactor callbacks to use this class
-internal class UniFfiHandleMap<T: Any> {
-    private val map = ConcurrentHashMap<USize, T>()
-    // Use AtomicInteger for our counter, since we may be on a 32-bit system.  4 billion possible
-    // values seems like enough. If somehow we generate 4 billion handles, then this will wrap
-    // around back to zero and we can assume the first handle generated will have been dropped by
-    // then.
-    private val counter = java.util.concurrent.atomic.AtomicInteger(0)
+// This is used pass an opaque 64-bit handle representing a foreign object to the Rust code.
+internal class UniffiHandleMap<T: Any> {
+    private val map = ConcurrentHashMap<Long, T>()
+    private val counter = java.util.concurrent.atomic.AtomicLong(0)
 
     val size: Int
         get() = map.size
 
-    fun insert(obj: T): USize {
-        val handle = USize(counter.getAndAdd(1).toLong())
+    // Insert a new object into the handle map and get a handle for it
+    fun insert(obj: T): Long {
+        val handle = counter.getAndAdd(1)
         map.put(handle, obj)
         return handle
     }
 
-    fun get(handle: USize): T? {
-        return map.get(handle)
+    // Get an object from the handle map
+    fun get(handle: Long): T {
+        return map.get(handle) ?: throw InternalException("UniffiHandleMap.get: Invalid handle")
     }
 
-    fun remove(handle: USize): T? {
-        return map.remove(handle)
+    // Remove an entry from the handlemap and get the Kotlin object back
+    fun remove(handle: Long): T {
+        return map.remove(handle) ?: throw InternalException("UniffiHandleMap: Invalid handle")
     }
-}
-
-// FFI type for Rust future continuations
-internal interface UniFffiRustFutureContinuationCallbackType : com.sun.jna.Callback {
-    fun callback(continuationHandle: USize, pollResult: Short);
 }
 
 // Contains loading, initialization code,
@@ -371,357 +384,818 @@ private inline fun <reified Lib : Library> loadIndirect(
     return Native.load<Lib>(findLibraryName(componentName), Lib::class.java)
 }
 
+// Define FFI callback types
+internal interface UniffiRustFutureContinuationCallback : com.sun.jna.Callback {
+    fun callback(`data`: Long,`pollResult`: Byte,)
+}
+internal interface UniffiForeignFutureFree : com.sun.jna.Callback {
+    fun callback(`handle`: Long,)
+}
+internal interface UniffiCallbackInterfaceFree : com.sun.jna.Callback {
+    fun callback(`handle`: Long,)
+}
+@Structure.FieldOrder("handle", "free")
+internal open class UniffiForeignFuture(
+    @JvmField internal var `handle`: Long = 0.toLong(),
+    @JvmField internal var `free`: UniffiForeignFutureFree? = null,
+) : Structure() {
+    class UniffiByValue(
+        `handle`: Long = 0.toLong(),
+        `free`: UniffiForeignFutureFree? = null,
+    ): UniffiForeignFuture(`handle`,`free`,), Structure.ByValue
+
+   internal fun uniffiSetValue(other: UniffiForeignFuture) {
+        `handle` = other.`handle`
+        `free` = other.`free`
+    }
+
+}
+@Structure.FieldOrder("returnValue", "callStatus")
+internal open class UniffiForeignFutureStructU8(
+    @JvmField internal var `returnValue`: Byte = 0.toByte(),
+    @JvmField internal var `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
+) : Structure() {
+    class UniffiByValue(
+        `returnValue`: Byte = 0.toByte(),
+        `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
+    ): UniffiForeignFutureStructU8(`returnValue`,`callStatus`,), Structure.ByValue
+
+   internal fun uniffiSetValue(other: UniffiForeignFutureStructU8) {
+        `returnValue` = other.`returnValue`
+        `callStatus` = other.`callStatus`
+    }
+
+}
+internal interface UniffiForeignFutureCompleteU8 : com.sun.jna.Callback {
+    fun callback(`callbackData`: Long,`result`: UniffiForeignFutureStructU8.UniffiByValue,)
+}
+@Structure.FieldOrder("returnValue", "callStatus")
+internal open class UniffiForeignFutureStructI8(
+    @JvmField internal var `returnValue`: Byte = 0.toByte(),
+    @JvmField internal var `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
+) : Structure() {
+    class UniffiByValue(
+        `returnValue`: Byte = 0.toByte(),
+        `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
+    ): UniffiForeignFutureStructI8(`returnValue`,`callStatus`,), Structure.ByValue
+
+   internal fun uniffiSetValue(other: UniffiForeignFutureStructI8) {
+        `returnValue` = other.`returnValue`
+        `callStatus` = other.`callStatus`
+    }
+
+}
+internal interface UniffiForeignFutureCompleteI8 : com.sun.jna.Callback {
+    fun callback(`callbackData`: Long,`result`: UniffiForeignFutureStructI8.UniffiByValue,)
+}
+@Structure.FieldOrder("returnValue", "callStatus")
+internal open class UniffiForeignFutureStructU16(
+    @JvmField internal var `returnValue`: Short = 0.toShort(),
+    @JvmField internal var `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
+) : Structure() {
+    class UniffiByValue(
+        `returnValue`: Short = 0.toShort(),
+        `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
+    ): UniffiForeignFutureStructU16(`returnValue`,`callStatus`,), Structure.ByValue
+
+   internal fun uniffiSetValue(other: UniffiForeignFutureStructU16) {
+        `returnValue` = other.`returnValue`
+        `callStatus` = other.`callStatus`
+    }
+
+}
+internal interface UniffiForeignFutureCompleteU16 : com.sun.jna.Callback {
+    fun callback(`callbackData`: Long,`result`: UniffiForeignFutureStructU16.UniffiByValue,)
+}
+@Structure.FieldOrder("returnValue", "callStatus")
+internal open class UniffiForeignFutureStructI16(
+    @JvmField internal var `returnValue`: Short = 0.toShort(),
+    @JvmField internal var `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
+) : Structure() {
+    class UniffiByValue(
+        `returnValue`: Short = 0.toShort(),
+        `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
+    ): UniffiForeignFutureStructI16(`returnValue`,`callStatus`,), Structure.ByValue
+
+   internal fun uniffiSetValue(other: UniffiForeignFutureStructI16) {
+        `returnValue` = other.`returnValue`
+        `callStatus` = other.`callStatus`
+    }
+
+}
+internal interface UniffiForeignFutureCompleteI16 : com.sun.jna.Callback {
+    fun callback(`callbackData`: Long,`result`: UniffiForeignFutureStructI16.UniffiByValue,)
+}
+@Structure.FieldOrder("returnValue", "callStatus")
+internal open class UniffiForeignFutureStructU32(
+    @JvmField internal var `returnValue`: Int = 0,
+    @JvmField internal var `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
+) : Structure() {
+    class UniffiByValue(
+        `returnValue`: Int = 0,
+        `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
+    ): UniffiForeignFutureStructU32(`returnValue`,`callStatus`,), Structure.ByValue
+
+   internal fun uniffiSetValue(other: UniffiForeignFutureStructU32) {
+        `returnValue` = other.`returnValue`
+        `callStatus` = other.`callStatus`
+    }
+
+}
+internal interface UniffiForeignFutureCompleteU32 : com.sun.jna.Callback {
+    fun callback(`callbackData`: Long,`result`: UniffiForeignFutureStructU32.UniffiByValue,)
+}
+@Structure.FieldOrder("returnValue", "callStatus")
+internal open class UniffiForeignFutureStructI32(
+    @JvmField internal var `returnValue`: Int = 0,
+    @JvmField internal var `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
+) : Structure() {
+    class UniffiByValue(
+        `returnValue`: Int = 0,
+        `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
+    ): UniffiForeignFutureStructI32(`returnValue`,`callStatus`,), Structure.ByValue
+
+   internal fun uniffiSetValue(other: UniffiForeignFutureStructI32) {
+        `returnValue` = other.`returnValue`
+        `callStatus` = other.`callStatus`
+    }
+
+}
+internal interface UniffiForeignFutureCompleteI32 : com.sun.jna.Callback {
+    fun callback(`callbackData`: Long,`result`: UniffiForeignFutureStructI32.UniffiByValue,)
+}
+@Structure.FieldOrder("returnValue", "callStatus")
+internal open class UniffiForeignFutureStructU64(
+    @JvmField internal var `returnValue`: Long = 0.toLong(),
+    @JvmField internal var `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
+) : Structure() {
+    class UniffiByValue(
+        `returnValue`: Long = 0.toLong(),
+        `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
+    ): UniffiForeignFutureStructU64(`returnValue`,`callStatus`,), Structure.ByValue
+
+   internal fun uniffiSetValue(other: UniffiForeignFutureStructU64) {
+        `returnValue` = other.`returnValue`
+        `callStatus` = other.`callStatus`
+    }
+
+}
+internal interface UniffiForeignFutureCompleteU64 : com.sun.jna.Callback {
+    fun callback(`callbackData`: Long,`result`: UniffiForeignFutureStructU64.UniffiByValue,)
+}
+@Structure.FieldOrder("returnValue", "callStatus")
+internal open class UniffiForeignFutureStructI64(
+    @JvmField internal var `returnValue`: Long = 0.toLong(),
+    @JvmField internal var `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
+) : Structure() {
+    class UniffiByValue(
+        `returnValue`: Long = 0.toLong(),
+        `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
+    ): UniffiForeignFutureStructI64(`returnValue`,`callStatus`,), Structure.ByValue
+
+   internal fun uniffiSetValue(other: UniffiForeignFutureStructI64) {
+        `returnValue` = other.`returnValue`
+        `callStatus` = other.`callStatus`
+    }
+
+}
+internal interface UniffiForeignFutureCompleteI64 : com.sun.jna.Callback {
+    fun callback(`callbackData`: Long,`result`: UniffiForeignFutureStructI64.UniffiByValue,)
+}
+@Structure.FieldOrder("returnValue", "callStatus")
+internal open class UniffiForeignFutureStructF32(
+    @JvmField internal var `returnValue`: Float = 0.0f,
+    @JvmField internal var `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
+) : Structure() {
+    class UniffiByValue(
+        `returnValue`: Float = 0.0f,
+        `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
+    ): UniffiForeignFutureStructF32(`returnValue`,`callStatus`,), Structure.ByValue
+
+   internal fun uniffiSetValue(other: UniffiForeignFutureStructF32) {
+        `returnValue` = other.`returnValue`
+        `callStatus` = other.`callStatus`
+    }
+
+}
+internal interface UniffiForeignFutureCompleteF32 : com.sun.jna.Callback {
+    fun callback(`callbackData`: Long,`result`: UniffiForeignFutureStructF32.UniffiByValue,)
+}
+@Structure.FieldOrder("returnValue", "callStatus")
+internal open class UniffiForeignFutureStructF64(
+    @JvmField internal var `returnValue`: Double = 0.0,
+    @JvmField internal var `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
+) : Structure() {
+    class UniffiByValue(
+        `returnValue`: Double = 0.0,
+        `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
+    ): UniffiForeignFutureStructF64(`returnValue`,`callStatus`,), Structure.ByValue
+
+   internal fun uniffiSetValue(other: UniffiForeignFutureStructF64) {
+        `returnValue` = other.`returnValue`
+        `callStatus` = other.`callStatus`
+    }
+
+}
+internal interface UniffiForeignFutureCompleteF64 : com.sun.jna.Callback {
+    fun callback(`callbackData`: Long,`result`: UniffiForeignFutureStructF64.UniffiByValue,)
+}
+@Structure.FieldOrder("returnValue", "callStatus")
+internal open class UniffiForeignFutureStructPointer(
+    @JvmField internal var `returnValue`: Pointer = Pointer.NULL,
+    @JvmField internal var `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
+) : Structure() {
+    class UniffiByValue(
+        `returnValue`: Pointer = Pointer.NULL,
+        `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
+    ): UniffiForeignFutureStructPointer(`returnValue`,`callStatus`,), Structure.ByValue
+
+   internal fun uniffiSetValue(other: UniffiForeignFutureStructPointer) {
+        `returnValue` = other.`returnValue`
+        `callStatus` = other.`callStatus`
+    }
+
+}
+internal interface UniffiForeignFutureCompletePointer : com.sun.jna.Callback {
+    fun callback(`callbackData`: Long,`result`: UniffiForeignFutureStructPointer.UniffiByValue,)
+}
+@Structure.FieldOrder("returnValue", "callStatus")
+internal open class UniffiForeignFutureStructRustBuffer(
+    @JvmField internal var `returnValue`: RustBuffer.ByValue = RustBuffer.ByValue(),
+    @JvmField internal var `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
+) : Structure() {
+    class UniffiByValue(
+        `returnValue`: RustBuffer.ByValue = RustBuffer.ByValue(),
+        `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
+    ): UniffiForeignFutureStructRustBuffer(`returnValue`,`callStatus`,), Structure.ByValue
+
+   internal fun uniffiSetValue(other: UniffiForeignFutureStructRustBuffer) {
+        `returnValue` = other.`returnValue`
+        `callStatus` = other.`callStatus`
+    }
+
+}
+internal interface UniffiForeignFutureCompleteRustBuffer : com.sun.jna.Callback {
+    fun callback(`callbackData`: Long,`result`: UniffiForeignFutureStructRustBuffer.UniffiByValue,)
+}
+@Structure.FieldOrder("callStatus")
+internal open class UniffiForeignFutureStructVoid(
+    @JvmField internal var `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
+) : Structure() {
+    class UniffiByValue(
+        `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
+    ): UniffiForeignFutureStructVoid(`callStatus`,), Structure.ByValue
+
+   internal fun uniffiSetValue(other: UniffiForeignFutureStructVoid) {
+        `callStatus` = other.`callStatus`
+    }
+
+}
+internal interface UniffiForeignFutureCompleteVoid : com.sun.jna.Callback {
+    fun callback(`callbackData`: Long,`result`: UniffiForeignFutureStructVoid.UniffiByValue,)
+}
+internal interface UniffiCallbackInterfaceEventListenerMethod0 : com.sun.jna.Callback {
+    fun callback(`uniffiHandle`: Long,`eventData`: RustBuffer.ByValue,`uniffiOutReturn`: Pointer,uniffiCallStatus: UniffiRustCallStatus,)
+}
+@Structure.FieldOrder("onEventOccurred", "uniffiFree")
+internal open class UniffiVTableCallbackInterfaceEventListener(
+    @JvmField internal var `onEventOccurred`: UniffiCallbackInterfaceEventListenerMethod0? = null,
+    @JvmField internal var `uniffiFree`: UniffiCallbackInterfaceFree? = null,
+) : Structure() {
+    class UniffiByValue(
+        `onEventOccurred`: UniffiCallbackInterfaceEventListenerMethod0? = null,
+        `uniffiFree`: UniffiCallbackInterfaceFree? = null,
+    ): UniffiVTableCallbackInterfaceEventListener(`onEventOccurred`,`uniffiFree`,), Structure.ByValue
+
+   internal fun uniffiSetValue(other: UniffiVTableCallbackInterfaceEventListener) {
+        `onEventOccurred` = other.`onEventOccurred`
+        `uniffiFree` = other.`uniffiFree`
+    }
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// For large crates we prevent `MethodTooLargeException` (see #2340)
+// N.B. the name of the extension is very misleading, since it is 
+// rather `InterfaceTooLargeException`, caused by too many methods 
+// in the interface for large crates.
+//
+// By splitting the otherwise huge interface into two parts
+// * UniffiLib 
+// * IntegrityCheckingUniffiLib (this)
+// we allow for ~2x as many methods in the UniffiLib interface.
+// 
+// The `ffi_uniffi_contract_version` method and all checksum methods are put 
+// into `IntegrityCheckingUniffiLib` and these methods are called only once,
+// when the library is loaded.
+internal interface IntegrityCheckingUniffiLib : Library {
+    // Integrity check functions only
+    fun uniffi_pubkycore_checksum_func_auth(
+): Short
+fun uniffi_pubkycore_checksum_func_create_recovery_file(
+): Short
+fun uniffi_pubkycore_checksum_func_decrypt_recovery_file(
+): Short
+fun uniffi_pubkycore_checksum_func_delete_file(
+): Short
+fun uniffi_pubkycore_checksum_func_generate_mnemonic_phrase(
+): Short
+fun uniffi_pubkycore_checksum_func_generate_mnemonic_phrase_and_keypair(
+): Short
+fun uniffi_pubkycore_checksum_func_generate_secret_key(
+): Short
+fun uniffi_pubkycore_checksum_func_get(
+): Short
+fun uniffi_pubkycore_checksum_func_get_homeserver(
+): Short
+fun uniffi_pubkycore_checksum_func_get_public_key_from_secret_key(
+): Short
+fun uniffi_pubkycore_checksum_func_get_signup_token(
+): Short
+fun uniffi_pubkycore_checksum_func_list(
+): Short
+fun uniffi_pubkycore_checksum_func_mnemonic_phrase_to_keypair(
+): Short
+fun uniffi_pubkycore_checksum_func_parse_auth_url(
+): Short
+fun uniffi_pubkycore_checksum_func_publish(
+): Short
+fun uniffi_pubkycore_checksum_func_publish_https(
+): Short
+fun uniffi_pubkycore_checksum_func_put(
+): Short
+fun uniffi_pubkycore_checksum_func_remove_event_listener(
+): Short
+fun uniffi_pubkycore_checksum_func_republish_homeserver(
+): Short
+fun uniffi_pubkycore_checksum_func_resolve(
+): Short
+fun uniffi_pubkycore_checksum_func_resolve_https(
+): Short
+fun uniffi_pubkycore_checksum_func_revalidate_session(
+): Short
+fun uniffi_pubkycore_checksum_func_set_event_listener(
+): Short
+fun uniffi_pubkycore_checksum_func_sign_in(
+): Short
+fun uniffi_pubkycore_checksum_func_sign_out(
+): Short
+fun uniffi_pubkycore_checksum_func_sign_up(
+): Short
+fun uniffi_pubkycore_checksum_func_switch_network(
+): Short
+fun uniffi_pubkycore_checksum_func_validate_mnemonic_phrase(
+): Short
+fun uniffi_pubkycore_checksum_method_eventlistener_on_event_occurred(
+): Short
+fun ffi_pubkycore_uniffi_contract_version(
+): Int
+
+}
+
 // A JNA Library to expose the extern-C FFI definitions.
 // This is an implementation detail which will be called internally by the public API.
-
-internal interface _UniFFILib : Library {
+internal interface UniffiLib : Library {
     companion object {
-        internal val INSTANCE: _UniFFILib by lazy {
-            loadIndirect<_UniFFILib>(componentName = "pubkycore")
-            .also { lib: _UniFFILib ->
-                uniffiCheckContractApiVersion(lib)
-                uniffiCheckApiChecksums(lib)
-                FfiConverterTypeEventListener.register(lib)
+        internal val INSTANCE: UniffiLib by lazy {
+            val componentName = "pubkycore"
+            // For large crates we prevent `MethodTooLargeException` (see #2340)
+            // N.B. the name of the extension is very misleading, since it is 
+            // rather `InterfaceTooLargeException`, caused by too many methods 
+            // in the interface for large crates.
+            //
+            // By splitting the otherwise huge interface into two parts
+            // * UniffiLib (this)
+            // * IntegrityCheckingUniffiLib
+            // And all checksum methods are put into `IntegrityCheckingUniffiLib`
+            // we allow for ~2x as many methods in the UniffiLib interface.
+            // 
+            // Thus we first load the library with `loadIndirect` as `IntegrityCheckingUniffiLib`
+            // so that we can (optionally!) call `uniffiCheckApiChecksums`...
+            loadIndirect<IntegrityCheckingUniffiLib>(componentName)
+                .also { lib: IntegrityCheckingUniffiLib ->
+                    uniffiCheckContractApiVersion(lib)
+                    uniffiCheckApiChecksums(lib)
                 }
+            // ... and then we load the library as `UniffiLib`
+            // N.B. we cannot use `loadIndirect` once and then try to cast it to `UniffiLib`
+            // => results in `java.lang.ClassCastException: com.sun.proxy.$Proxy cannot be cast to ...`
+            // error. So we must call `loadIndirect` twice. For crates large enough
+            // to trigger this issue, the performance impact is negligible, running on
+            // a macOS M1 machine the `loadIndirect` call takes ~50ms.
+            val lib = loadIndirect<UniffiLib>(componentName)
+            // No need to check the contract version and checksums, since 
+            // we already did that with `IntegrityCheckingUniffiLib` above.
+            uniffiCallbackInterfaceEventListener.register(lib)
+            // Loading of library with integrity check done.
+            lib
+        }
+        
+        // The Cleaner for the whole library
+        internal val CLEANER: UniffiCleaner by lazy {
+            UniffiCleaner.create()
         }
     }
 
-    fun uniffi_pubkycore_fn_free_eventnotifier(`ptr`: Pointer,_uniffi_out_err: RustCallStatus, 
-    ): Unit
-    fun uniffi_pubkycore_fn_init_callback_eventlistener(`callbackStub`: ForeignCallback,_uniffi_out_err: RustCallStatus, 
-    ): Unit
-    fun uniffi_pubkycore_fn_func_auth(`url`: RustBuffer.ByValue,`secretKey`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_pubkycore_fn_func_create_recovery_file(`secretKey`: RustBuffer.ByValue,`passphrase`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_pubkycore_fn_func_decrypt_recovery_file(`recoveryFile`: RustBuffer.ByValue,`passphrase`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_pubkycore_fn_func_delete_file(`url`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_pubkycore_fn_func_generate_mnemonic_phrase(_uniffi_out_err: RustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_pubkycore_fn_func_generate_mnemonic_phrase_and_keypair(_uniffi_out_err: RustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_pubkycore_fn_func_generate_secret_key(_uniffi_out_err: RustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_pubkycore_fn_func_get(`url`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_pubkycore_fn_func_get_homeserver(`pubky`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_pubkycore_fn_func_get_public_key_from_secret_key(`secretKey`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_pubkycore_fn_func_get_signup_token(`homeserverPubky`: RustBuffer.ByValue,`adminPassword`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_pubkycore_fn_func_list(`url`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_pubkycore_fn_func_mnemonic_phrase_to_keypair(`mnemonicPhrase`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_pubkycore_fn_func_parse_auth_url(`url`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_pubkycore_fn_func_publish(`recordName`: RustBuffer.ByValue,`recordContent`: RustBuffer.ByValue,`secretKey`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_pubkycore_fn_func_publish_https(`recordName`: RustBuffer.ByValue,`target`: RustBuffer.ByValue,`secretKey`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_pubkycore_fn_func_put(`url`: RustBuffer.ByValue,`content`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_pubkycore_fn_func_remove_event_listener(_uniffi_out_err: RustCallStatus, 
-    ): Unit
-    fun uniffi_pubkycore_fn_func_republish_homeserver(`secretKey`: RustBuffer.ByValue,`homeserver`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_pubkycore_fn_func_resolve(`publicKey`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_pubkycore_fn_func_resolve_https(`publicKey`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_pubkycore_fn_func_session(`pubky`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_pubkycore_fn_func_set_event_listener(`listener`: Long,_uniffi_out_err: RustCallStatus, 
-    ): Unit
-    fun uniffi_pubkycore_fn_func_sign_in(`secretKey`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_pubkycore_fn_func_sign_out(`secretKey`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_pubkycore_fn_func_sign_up(`secretKey`: RustBuffer.ByValue,`homeserver`: RustBuffer.ByValue,`signupToken`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_pubkycore_fn_func_switch_network(`useTestnet`: Byte,_uniffi_out_err: RustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_pubkycore_fn_func_validate_mnemonic_phrase(`mnemonicPhrase`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
-    ): RustBuffer.ByValue
-    fun ffi_pubkycore_rustbuffer_alloc(`size`: Int,_uniffi_out_err: RustCallStatus, 
-    ): RustBuffer.ByValue
-    fun ffi_pubkycore_rustbuffer_from_bytes(`bytes`: ForeignBytes.ByValue,_uniffi_out_err: RustCallStatus, 
-    ): RustBuffer.ByValue
-    fun ffi_pubkycore_rustbuffer_free(`buf`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
-    ): Unit
-    fun ffi_pubkycore_rustbuffer_reserve(`buf`: RustBuffer.ByValue,`additional`: Int,_uniffi_out_err: RustCallStatus, 
-    ): RustBuffer.ByValue
-    fun ffi_pubkycore_rust_future_continuation_callback_set(`callback`: UniFffiRustFutureContinuationCallbackType,
-    ): Unit
-    fun ffi_pubkycore_rust_future_poll_u8(`handle`: Pointer,`uniffiCallback`: USize,
-    ): Unit
-    fun ffi_pubkycore_rust_future_cancel_u8(`handle`: Pointer,
-    ): Unit
-    fun ffi_pubkycore_rust_future_free_u8(`handle`: Pointer,
-    ): Unit
-    fun ffi_pubkycore_rust_future_complete_u8(`handle`: Pointer,_uniffi_out_err: RustCallStatus, 
-    ): Byte
-    fun ffi_pubkycore_rust_future_poll_i8(`handle`: Pointer,`uniffiCallback`: USize,
-    ): Unit
-    fun ffi_pubkycore_rust_future_cancel_i8(`handle`: Pointer,
-    ): Unit
-    fun ffi_pubkycore_rust_future_free_i8(`handle`: Pointer,
-    ): Unit
-    fun ffi_pubkycore_rust_future_complete_i8(`handle`: Pointer,_uniffi_out_err: RustCallStatus, 
-    ): Byte
-    fun ffi_pubkycore_rust_future_poll_u16(`handle`: Pointer,`uniffiCallback`: USize,
-    ): Unit
-    fun ffi_pubkycore_rust_future_cancel_u16(`handle`: Pointer,
-    ): Unit
-    fun ffi_pubkycore_rust_future_free_u16(`handle`: Pointer,
-    ): Unit
-    fun ffi_pubkycore_rust_future_complete_u16(`handle`: Pointer,_uniffi_out_err: RustCallStatus, 
-    ): Short
-    fun ffi_pubkycore_rust_future_poll_i16(`handle`: Pointer,`uniffiCallback`: USize,
-    ): Unit
-    fun ffi_pubkycore_rust_future_cancel_i16(`handle`: Pointer,
-    ): Unit
-    fun ffi_pubkycore_rust_future_free_i16(`handle`: Pointer,
-    ): Unit
-    fun ffi_pubkycore_rust_future_complete_i16(`handle`: Pointer,_uniffi_out_err: RustCallStatus, 
-    ): Short
-    fun ffi_pubkycore_rust_future_poll_u32(`handle`: Pointer,`uniffiCallback`: USize,
-    ): Unit
-    fun ffi_pubkycore_rust_future_cancel_u32(`handle`: Pointer,
-    ): Unit
-    fun ffi_pubkycore_rust_future_free_u32(`handle`: Pointer,
-    ): Unit
-    fun ffi_pubkycore_rust_future_complete_u32(`handle`: Pointer,_uniffi_out_err: RustCallStatus, 
-    ): Int
-    fun ffi_pubkycore_rust_future_poll_i32(`handle`: Pointer,`uniffiCallback`: USize,
-    ): Unit
-    fun ffi_pubkycore_rust_future_cancel_i32(`handle`: Pointer,
-    ): Unit
-    fun ffi_pubkycore_rust_future_free_i32(`handle`: Pointer,
-    ): Unit
-    fun ffi_pubkycore_rust_future_complete_i32(`handle`: Pointer,_uniffi_out_err: RustCallStatus, 
-    ): Int
-    fun ffi_pubkycore_rust_future_poll_u64(`handle`: Pointer,`uniffiCallback`: USize,
-    ): Unit
-    fun ffi_pubkycore_rust_future_cancel_u64(`handle`: Pointer,
-    ): Unit
-    fun ffi_pubkycore_rust_future_free_u64(`handle`: Pointer,
-    ): Unit
-    fun ffi_pubkycore_rust_future_complete_u64(`handle`: Pointer,_uniffi_out_err: RustCallStatus, 
-    ): Long
-    fun ffi_pubkycore_rust_future_poll_i64(`handle`: Pointer,`uniffiCallback`: USize,
-    ): Unit
-    fun ffi_pubkycore_rust_future_cancel_i64(`handle`: Pointer,
-    ): Unit
-    fun ffi_pubkycore_rust_future_free_i64(`handle`: Pointer,
-    ): Unit
-    fun ffi_pubkycore_rust_future_complete_i64(`handle`: Pointer,_uniffi_out_err: RustCallStatus, 
-    ): Long
-    fun ffi_pubkycore_rust_future_poll_f32(`handle`: Pointer,`uniffiCallback`: USize,
-    ): Unit
-    fun ffi_pubkycore_rust_future_cancel_f32(`handle`: Pointer,
-    ): Unit
-    fun ffi_pubkycore_rust_future_free_f32(`handle`: Pointer,
-    ): Unit
-    fun ffi_pubkycore_rust_future_complete_f32(`handle`: Pointer,_uniffi_out_err: RustCallStatus, 
-    ): Float
-    fun ffi_pubkycore_rust_future_poll_f64(`handle`: Pointer,`uniffiCallback`: USize,
-    ): Unit
-    fun ffi_pubkycore_rust_future_cancel_f64(`handle`: Pointer,
-    ): Unit
-    fun ffi_pubkycore_rust_future_free_f64(`handle`: Pointer,
-    ): Unit
-    fun ffi_pubkycore_rust_future_complete_f64(`handle`: Pointer,_uniffi_out_err: RustCallStatus, 
-    ): Double
-    fun ffi_pubkycore_rust_future_poll_pointer(`handle`: Pointer,`uniffiCallback`: USize,
-    ): Unit
-    fun ffi_pubkycore_rust_future_cancel_pointer(`handle`: Pointer,
-    ): Unit
-    fun ffi_pubkycore_rust_future_free_pointer(`handle`: Pointer,
-    ): Unit
-    fun ffi_pubkycore_rust_future_complete_pointer(`handle`: Pointer,_uniffi_out_err: RustCallStatus, 
-    ): Pointer
-    fun ffi_pubkycore_rust_future_poll_rust_buffer(`handle`: Pointer,`uniffiCallback`: USize,
-    ): Unit
-    fun ffi_pubkycore_rust_future_cancel_rust_buffer(`handle`: Pointer,
-    ): Unit
-    fun ffi_pubkycore_rust_future_free_rust_buffer(`handle`: Pointer,
-    ): Unit
-    fun ffi_pubkycore_rust_future_complete_rust_buffer(`handle`: Pointer,_uniffi_out_err: RustCallStatus, 
-    ): RustBuffer.ByValue
-    fun ffi_pubkycore_rust_future_poll_void(`handle`: Pointer,`uniffiCallback`: USize,
-    ): Unit
-    fun ffi_pubkycore_rust_future_cancel_void(`handle`: Pointer,
-    ): Unit
-    fun ffi_pubkycore_rust_future_free_void(`handle`: Pointer,
-    ): Unit
-    fun ffi_pubkycore_rust_future_complete_void(`handle`: Pointer,_uniffi_out_err: RustCallStatus, 
-    ): Unit
-    fun uniffi_pubkycore_checksum_func_auth(
-    ): Short
-    fun uniffi_pubkycore_checksum_func_create_recovery_file(
-    ): Short
-    fun uniffi_pubkycore_checksum_func_decrypt_recovery_file(
-    ): Short
-    fun uniffi_pubkycore_checksum_func_delete_file(
-    ): Short
-    fun uniffi_pubkycore_checksum_func_generate_mnemonic_phrase(
-    ): Short
-    fun uniffi_pubkycore_checksum_func_generate_mnemonic_phrase_and_keypair(
-    ): Short
-    fun uniffi_pubkycore_checksum_func_generate_secret_key(
-    ): Short
-    fun uniffi_pubkycore_checksum_func_get(
-    ): Short
-    fun uniffi_pubkycore_checksum_func_get_homeserver(
-    ): Short
-    fun uniffi_pubkycore_checksum_func_get_public_key_from_secret_key(
-    ): Short
-    fun uniffi_pubkycore_checksum_func_get_signup_token(
-    ): Short
-    fun uniffi_pubkycore_checksum_func_list(
-    ): Short
-    fun uniffi_pubkycore_checksum_func_mnemonic_phrase_to_keypair(
-    ): Short
-    fun uniffi_pubkycore_checksum_func_parse_auth_url(
-    ): Short
-    fun uniffi_pubkycore_checksum_func_publish(
-    ): Short
-    fun uniffi_pubkycore_checksum_func_publish_https(
-    ): Short
-    fun uniffi_pubkycore_checksum_func_put(
-    ): Short
-    fun uniffi_pubkycore_checksum_func_remove_event_listener(
-    ): Short
-    fun uniffi_pubkycore_checksum_func_republish_homeserver(
-    ): Short
-    fun uniffi_pubkycore_checksum_func_resolve(
-    ): Short
-    fun uniffi_pubkycore_checksum_func_resolve_https(
-    ): Short
-    fun uniffi_pubkycore_checksum_func_session(
-    ): Short
-    fun uniffi_pubkycore_checksum_func_set_event_listener(
-    ): Short
-    fun uniffi_pubkycore_checksum_func_sign_in(
-    ): Short
-    fun uniffi_pubkycore_checksum_func_sign_out(
-    ): Short
-    fun uniffi_pubkycore_checksum_func_sign_up(
-    ): Short
-    fun uniffi_pubkycore_checksum_func_switch_network(
-    ): Short
-    fun uniffi_pubkycore_checksum_func_validate_mnemonic_phrase(
-    ): Short
-    fun uniffi_pubkycore_checksum_method_eventlistener_on_event_occurred(
-    ): Short
-    fun ffi_pubkycore_uniffi_contract_version(
-    ): Int
-    
+    // FFI functions
+    fun uniffi_pubkycore_fn_clone_eventnotifier(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_pubkycore_fn_free_eventnotifier(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_pubkycore_fn_init_callback_vtable_eventlistener(`vtable`: UniffiVTableCallbackInterfaceEventListener,
+): Unit
+fun uniffi_pubkycore_fn_func_auth(`url`: RustBuffer.ByValue,`secretKey`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_pubkycore_fn_func_create_recovery_file(`secretKey`: RustBuffer.ByValue,`passphrase`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_pubkycore_fn_func_decrypt_recovery_file(`recoveryFile`: RustBuffer.ByValue,`passphrase`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_pubkycore_fn_func_delete_file(`url`: RustBuffer.ByValue,`secretKey`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_pubkycore_fn_func_generate_mnemonic_phrase(uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_pubkycore_fn_func_generate_mnemonic_phrase_and_keypair(uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_pubkycore_fn_func_generate_secret_key(uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_pubkycore_fn_func_get(`url`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_pubkycore_fn_func_get_homeserver(`pubky`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_pubkycore_fn_func_get_public_key_from_secret_key(`secretKey`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_pubkycore_fn_func_get_signup_token(`homeserverPubky`: RustBuffer.ByValue,`adminPassword`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_pubkycore_fn_func_list(`url`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_pubkycore_fn_func_mnemonic_phrase_to_keypair(`mnemonicPhrase`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_pubkycore_fn_func_parse_auth_url(`url`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_pubkycore_fn_func_publish(`recordName`: RustBuffer.ByValue,`recordContent`: RustBuffer.ByValue,`secretKey`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_pubkycore_fn_func_publish_https(`recordName`: RustBuffer.ByValue,`target`: RustBuffer.ByValue,`secretKey`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_pubkycore_fn_func_put(`url`: RustBuffer.ByValue,`content`: RustBuffer.ByValue,`secretKey`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_pubkycore_fn_func_remove_event_listener(uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_pubkycore_fn_func_republish_homeserver(`secretKey`: RustBuffer.ByValue,`homeserver`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_pubkycore_fn_func_resolve(`publicKey`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_pubkycore_fn_func_resolve_https(`publicKey`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_pubkycore_fn_func_revalidate_session(`sessionSecret`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_pubkycore_fn_func_set_event_listener(`listener`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_pubkycore_fn_func_sign_in(`secretKey`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_pubkycore_fn_func_sign_out(`sessionSecret`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_pubkycore_fn_func_sign_up(`secretKey`: RustBuffer.ByValue,`homeserver`: RustBuffer.ByValue,`signupToken`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_pubkycore_fn_func_switch_network(`useTestnet`: Byte,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_pubkycore_fn_func_validate_mnemonic_phrase(`mnemonicPhrase`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun ffi_pubkycore_rustbuffer_alloc(`size`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun ffi_pubkycore_rustbuffer_from_bytes(`bytes`: ForeignBytes.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun ffi_pubkycore_rustbuffer_free(`buf`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun ffi_pubkycore_rustbuffer_reserve(`buf`: RustBuffer.ByValue,`additional`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun ffi_pubkycore_rust_future_poll_u8(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+): Unit
+fun ffi_pubkycore_rust_future_cancel_u8(`handle`: Long,
+): Unit
+fun ffi_pubkycore_rust_future_free_u8(`handle`: Long,
+): Unit
+fun ffi_pubkycore_rust_future_complete_u8(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Byte
+fun ffi_pubkycore_rust_future_poll_i8(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+): Unit
+fun ffi_pubkycore_rust_future_cancel_i8(`handle`: Long,
+): Unit
+fun ffi_pubkycore_rust_future_free_i8(`handle`: Long,
+): Unit
+fun ffi_pubkycore_rust_future_complete_i8(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Byte
+fun ffi_pubkycore_rust_future_poll_u16(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+): Unit
+fun ffi_pubkycore_rust_future_cancel_u16(`handle`: Long,
+): Unit
+fun ffi_pubkycore_rust_future_free_u16(`handle`: Long,
+): Unit
+fun ffi_pubkycore_rust_future_complete_u16(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Short
+fun ffi_pubkycore_rust_future_poll_i16(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+): Unit
+fun ffi_pubkycore_rust_future_cancel_i16(`handle`: Long,
+): Unit
+fun ffi_pubkycore_rust_future_free_i16(`handle`: Long,
+): Unit
+fun ffi_pubkycore_rust_future_complete_i16(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Short
+fun ffi_pubkycore_rust_future_poll_u32(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+): Unit
+fun ffi_pubkycore_rust_future_cancel_u32(`handle`: Long,
+): Unit
+fun ffi_pubkycore_rust_future_free_u32(`handle`: Long,
+): Unit
+fun ffi_pubkycore_rust_future_complete_u32(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Int
+fun ffi_pubkycore_rust_future_poll_i32(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+): Unit
+fun ffi_pubkycore_rust_future_cancel_i32(`handle`: Long,
+): Unit
+fun ffi_pubkycore_rust_future_free_i32(`handle`: Long,
+): Unit
+fun ffi_pubkycore_rust_future_complete_i32(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Int
+fun ffi_pubkycore_rust_future_poll_u64(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+): Unit
+fun ffi_pubkycore_rust_future_cancel_u64(`handle`: Long,
+): Unit
+fun ffi_pubkycore_rust_future_free_u64(`handle`: Long,
+): Unit
+fun ffi_pubkycore_rust_future_complete_u64(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Long
+fun ffi_pubkycore_rust_future_poll_i64(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+): Unit
+fun ffi_pubkycore_rust_future_cancel_i64(`handle`: Long,
+): Unit
+fun ffi_pubkycore_rust_future_free_i64(`handle`: Long,
+): Unit
+fun ffi_pubkycore_rust_future_complete_i64(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Long
+fun ffi_pubkycore_rust_future_poll_f32(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+): Unit
+fun ffi_pubkycore_rust_future_cancel_f32(`handle`: Long,
+): Unit
+fun ffi_pubkycore_rust_future_free_f32(`handle`: Long,
+): Unit
+fun ffi_pubkycore_rust_future_complete_f32(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Float
+fun ffi_pubkycore_rust_future_poll_f64(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+): Unit
+fun ffi_pubkycore_rust_future_cancel_f64(`handle`: Long,
+): Unit
+fun ffi_pubkycore_rust_future_free_f64(`handle`: Long,
+): Unit
+fun ffi_pubkycore_rust_future_complete_f64(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Double
+fun ffi_pubkycore_rust_future_poll_pointer(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+): Unit
+fun ffi_pubkycore_rust_future_cancel_pointer(`handle`: Long,
+): Unit
+fun ffi_pubkycore_rust_future_free_pointer(`handle`: Long,
+): Unit
+fun ffi_pubkycore_rust_future_complete_pointer(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun ffi_pubkycore_rust_future_poll_rust_buffer(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+): Unit
+fun ffi_pubkycore_rust_future_cancel_rust_buffer(`handle`: Long,
+): Unit
+fun ffi_pubkycore_rust_future_free_rust_buffer(`handle`: Long,
+): Unit
+fun ffi_pubkycore_rust_future_complete_rust_buffer(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun ffi_pubkycore_rust_future_poll_void(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+): Unit
+fun ffi_pubkycore_rust_future_cancel_void(`handle`: Long,
+): Unit
+fun ffi_pubkycore_rust_future_free_void(`handle`: Long,
+): Unit
+fun ffi_pubkycore_rust_future_complete_void(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+
 }
 
-private fun uniffiCheckContractApiVersion(lib: _UniFFILib) {
+private fun uniffiCheckContractApiVersion(lib: IntegrityCheckingUniffiLib) {
     // Get the bindings contract version from our ComponentInterface
-    val bindings_contract_version = 24
+    val bindings_contract_version = 29
     // Get the scaffolding contract version by calling the into the dylib
     val scaffolding_contract_version = lib.ffi_pubkycore_uniffi_contract_version()
     if (bindings_contract_version != scaffolding_contract_version) {
         throw RuntimeException("UniFFI contract version mismatch: try cleaning and rebuilding your project")
     }
 }
-
 @Suppress("UNUSED_PARAMETER")
-private fun uniffiCheckApiChecksums(lib: _UniFFILib) {
-    if (lib.uniffi_pubkycore_checksum_func_auth() != 51826.toShort()) {
+private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
+    if (lib.uniffi_pubkycore_checksum_func_auth() != 36598.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_pubkycore_checksum_func_create_recovery_file() != 48846.toShort()) {
+    if (lib.uniffi_pubkycore_checksum_func_create_recovery_file() != 13366.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_pubkycore_checksum_func_decrypt_recovery_file() != 26407.toShort()) {
+    if (lib.uniffi_pubkycore_checksum_func_decrypt_recovery_file() != 56578.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_pubkycore_checksum_func_delete_file() != 9063.toShort()) {
+    if (lib.uniffi_pubkycore_checksum_func_delete_file() != 37648.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_pubkycore_checksum_func_generate_mnemonic_phrase() != 2358.toShort()) {
+    if (lib.uniffi_pubkycore_checksum_func_generate_mnemonic_phrase() != 38398.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_pubkycore_checksum_func_generate_mnemonic_phrase_and_keypair() != 44395.toShort()) {
+    if (lib.uniffi_pubkycore_checksum_func_generate_mnemonic_phrase_and_keypair() != 13119.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_pubkycore_checksum_func_generate_secret_key() != 12800.toShort()) {
+    if (lib.uniffi_pubkycore_checksum_func_generate_secret_key() != 63319.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_pubkycore_checksum_func_get() != 6591.toShort()) {
+    if (lib.uniffi_pubkycore_checksum_func_get() != 12463.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_pubkycore_checksum_func_get_homeserver() != 40658.toShort()) {
+    if (lib.uniffi_pubkycore_checksum_func_get_homeserver() != 35947.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_pubkycore_checksum_func_get_public_key_from_secret_key() != 40316.toShort()) {
+    if (lib.uniffi_pubkycore_checksum_func_get_public_key_from_secret_key() != 65274.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_pubkycore_checksum_func_get_signup_token() != 47927.toShort()) {
+    if (lib.uniffi_pubkycore_checksum_func_get_signup_token() != 7931.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_pubkycore_checksum_func_list() != 43198.toShort()) {
+    if (lib.uniffi_pubkycore_checksum_func_list() != 14351.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_pubkycore_checksum_func_mnemonic_phrase_to_keypair() != 45784.toShort()) {
+    if (lib.uniffi_pubkycore_checksum_func_mnemonic_phrase_to_keypair() != 59088.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_pubkycore_checksum_func_parse_auth_url() != 27379.toShort()) {
+    if (lib.uniffi_pubkycore_checksum_func_parse_auth_url() != 47180.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_pubkycore_checksum_func_publish() != 48989.toShort()) {
+    if (lib.uniffi_pubkycore_checksum_func_publish() != 60897.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_pubkycore_checksum_func_publish_https() != 5614.toShort()) {
+    if (lib.uniffi_pubkycore_checksum_func_publish_https() != 43863.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_pubkycore_checksum_func_put() != 48150.toShort()) {
+    if (lib.uniffi_pubkycore_checksum_func_put() != 29897.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_pubkycore_checksum_func_remove_event_listener() != 23534.toShort()) {
+    if (lib.uniffi_pubkycore_checksum_func_remove_event_listener() != 3828.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_pubkycore_checksum_func_republish_homeserver() != 63919.toShort()) {
+    if (lib.uniffi_pubkycore_checksum_func_republish_homeserver() != 20001.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_pubkycore_checksum_func_resolve() != 34317.toShort()) {
+    if (lib.uniffi_pubkycore_checksum_func_resolve() != 873.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_pubkycore_checksum_func_resolve_https() != 17266.toShort()) {
+    if (lib.uniffi_pubkycore_checksum_func_resolve_https() != 34852.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_pubkycore_checksum_func_session() != 59795.toShort()) {
+    if (lib.uniffi_pubkycore_checksum_func_revalidate_session() != 12593.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_pubkycore_checksum_func_set_event_listener() != 60071.toShort()) {
+    if (lib.uniffi_pubkycore_checksum_func_set_event_listener() != 18894.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_pubkycore_checksum_func_sign_in() != 21584.toShort()) {
+    if (lib.uniffi_pubkycore_checksum_func_sign_in() != 31244.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_pubkycore_checksum_func_sign_out() != 34903.toShort()) {
+    if (lib.uniffi_pubkycore_checksum_func_sign_out() != 9048.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_pubkycore_checksum_func_sign_up() != 48789.toShort()) {
+    if (lib.uniffi_pubkycore_checksum_func_sign_up() != 49409.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_pubkycore_checksum_func_switch_network() != 64215.toShort()) {
+    if (lib.uniffi_pubkycore_checksum_func_switch_network() != 48346.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_pubkycore_checksum_func_validate_mnemonic_phrase() != 30362.toShort()) {
+    if (lib.uniffi_pubkycore_checksum_func_validate_mnemonic_phrase() != 9633.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_pubkycore_checksum_method_eventlistener_on_event_occurred() != 11531.toShort()) {
+    if (lib.uniffi_pubkycore_checksum_method_eventlistener_on_event_occurred() != 24359.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+}
+
+/**
+ * @suppress
+ */
+public fun uniffiEnsureInitialized() {
+    UniffiLib.INSTANCE
 }
 
 // Async support
@@ -729,6 +1203,169 @@ private fun uniffiCheckApiChecksums(lib: _UniFFILib) {
 // Public interface members begin here.
 
 
+// Interface implemented by anything that can contain an object reference.
+//
+// Such types expose a `destroy()` method that must be called to cleanly
+// dispose of the contained objects. Failure to call this method may result
+// in memory leaks.
+//
+// The easiest way to ensure this method is called is to use the `.use`
+// helper method to execute a block and destroy the object at the end.
+interface Disposable {
+    fun destroy()
+    companion object {
+        fun destroy(vararg args: Any?) {
+            for (arg in args) {
+                when (arg) {
+                    is Disposable -> arg.destroy()
+                    is ArrayList<*> -> {
+                        for (idx in arg.indices) {
+                            val element = arg[idx]
+                            if (element is Disposable) {
+                                element.destroy()
+                            }
+                        }
+                    }
+                    is Map<*, *> -> {
+                        for (element in arg.values) {
+                            if (element is Disposable) {
+                                element.destroy()
+                            }
+                        }
+                    }
+                    is Iterable<*> -> {
+                        for (element in arg) {
+                            if (element is Disposable) {
+                                element.destroy()
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * @suppress
+ */
+inline fun <T : Disposable?, R> T.use(block: (T) -> R) =
+    try {
+        block(this)
+    } finally {
+        try {
+            // N.B. our implementation is on the nullable type `Disposable?`.
+            this?.destroy()
+        } catch (e: Throwable) {
+            // swallow
+        }
+    }
+
+/** 
+ * Used to instantiate an interface without an actual pointer, for fakes in tests, mostly.
+ *
+ * @suppress
+ * */
+object NoPointer// Magic number for the Rust proxy to call using the same mechanism as every other method,
+// to free the callback once it's dropped by Rust.
+internal const val IDX_CALLBACK_FREE = 0
+// Callback return codes
+internal const val UNIFFI_CALLBACK_SUCCESS = 0
+internal const val UNIFFI_CALLBACK_ERROR = 1
+internal const val UNIFFI_CALLBACK_UNEXPECTED_ERROR = 2
+
+/**
+ * @suppress
+ */
+public abstract class FfiConverterCallbackInterface<CallbackInterface: Any>: FfiConverter<CallbackInterface, Long> {
+    internal val handleMap = UniffiHandleMap<CallbackInterface>()
+
+    internal fun drop(handle: Long) {
+        handleMap.remove(handle)
+    }
+
+    override fun lift(value: Long): CallbackInterface {
+        return handleMap.get(value)
+    }
+
+    override fun read(buf: ByteBuffer) = lift(buf.getLong())
+
+    override fun lower(value: CallbackInterface) = handleMap.insert(value)
+
+    override fun allocationSize(value: CallbackInterface) = 8UL
+
+    override fun write(value: CallbackInterface, buf: ByteBuffer) {
+        buf.putLong(lower(value))
+    }
+}
+/**
+ * The cleaner interface for Object finalization code to run.
+ * This is the entry point to any implementation that we're using.
+ *
+ * The cleaner registers objects and returns cleanables, so now we are
+ * defining a `UniffiCleaner` with a `UniffiClenaer.Cleanable` to abstract the
+ * different implmentations available at compile time.
+ *
+ * @suppress
+ */
+interface UniffiCleaner {
+    interface Cleanable {
+        fun clean()
+    }
+
+    fun register(value: Any, cleanUpTask: Runnable): UniffiCleaner.Cleanable
+
+    companion object
+}
+
+// The fallback Jna cleaner, which is available for both Android, and the JVM.
+private class UniffiJnaCleaner : UniffiCleaner {
+    private val cleaner = com.sun.jna.internal.Cleaner.getCleaner()
+
+    override fun register(value: Any, cleanUpTask: Runnable): UniffiCleaner.Cleanable =
+        UniffiJnaCleanable(cleaner.register(value, cleanUpTask))
+}
+
+private class UniffiJnaCleanable(
+    private val cleanable: com.sun.jna.internal.Cleaner.Cleanable,
+) : UniffiCleaner.Cleanable {
+    override fun clean() = cleanable.clean()
+}
+
+
+// We decide at uniffi binding generation time whether we were
+// using Android or not.
+// There are further runtime checks to chose the correct implementation
+// of the cleaner.
+private fun UniffiCleaner.Companion.create(): UniffiCleaner =
+    try {
+        // For safety's sake: if the library hasn't been run in android_cleaner = true
+        // mode, but is being run on Android, then we still need to think about
+        // Android API versions.
+        // So we check if java.lang.ref.Cleaner is there, and use that…
+        java.lang.Class.forName("java.lang.ref.Cleaner")
+        JavaLangRefCleaner()
+    } catch (e: ClassNotFoundException) {
+        // … otherwise, fallback to the JNA cleaner.
+        UniffiJnaCleaner()
+    }
+
+private class JavaLangRefCleaner : UniffiCleaner {
+    val cleaner = java.lang.ref.Cleaner.create()
+
+    override fun register(value: Any, cleanUpTask: Runnable): UniffiCleaner.Cleanable =
+        JavaLangRefCleanable(cleaner.register(value, cleanUpTask))
+}
+
+private class JavaLangRefCleanable(
+    val cleanable: java.lang.ref.Cleaner.Cleanable
+) : UniffiCleaner.Cleanable {
+    override fun clean() = cleanable.clean()
+}
+
+/**
+ * @suppress
+ */
 public object FfiConverterBoolean: FfiConverter<Boolean, Byte> {
     override fun lift(value: Byte): Boolean {
         return value.toInt() != 0
@@ -742,20 +1379,23 @@ public object FfiConverterBoolean: FfiConverter<Boolean, Byte> {
         return if (value) 1.toByte() else 0.toByte()
     }
 
-    override fun allocationSize(value: Boolean) = 1
+    override fun allocationSize(value: Boolean) = 1UL
 
     override fun write(value: Boolean, buf: ByteBuffer) {
         buf.put(lower(value))
     }
 }
 
+/**
+ * @suppress
+ */
 public object FfiConverterString: FfiConverter<String, RustBuffer.ByValue> {
     // Note: we don't inherit from FfiConverterRustBuffer, because we use a
     // special encoding when lowering/lifting.  We can use `RustBuffer.len` to
     // store our length and avoid writing it out to the buffer.
     override fun lift(value: RustBuffer.ByValue): String {
         try {
-            val byteArr = ByteArray(value.len)
+            val byteArr = ByteArray(value.len.toInt())
             value.asByteBuffer()!!.get(byteArr)
             return byteArr.toString(Charsets.UTF_8)
         } finally {
@@ -782,7 +1422,7 @@ public object FfiConverterString: FfiConverter<String, RustBuffer.ByValue> {
         val byteBuf = toUtf8(value)
         // Ideally we'd pass these bytes to `ffi_bytebuffer_from_bytes`, but doing so would require us
         // to copy them into a JNA `Memory`. So we might as well directly copy them into a `RustBuffer`.
-        val rbuf = RustBuffer.alloc(byteBuf.limit())
+        val rbuf = RustBuffer.alloc(byteBuf.limit().toULong())
         rbuf.asByteBuffer()!!.put(byteBuf)
         return rbuf
     }
@@ -790,9 +1430,9 @@ public object FfiConverterString: FfiConverter<String, RustBuffer.ByValue> {
     // We aren't sure exactly how many bytes our string will be once it's UTF-8
     // encoded.  Allocate 3 bytes per UTF-16 code unit which will always be
     // enough.
-    override fun allocationSize(value: String): Int {
-        val sizeForLength = 4
-        val sizeForString = value.length * 3
+    override fun allocationSize(value: String): ULong {
+        val sizeForLength = 4UL
+        val sizeForString = value.length.toULong() * 3UL
         return sizeForLength + sizeForString
     }
 
@@ -804,57 +1444,28 @@ public object FfiConverterString: FfiConverter<String, RustBuffer.ByValue> {
 }
 
 
-// Interface implemented by anything that can contain an object reference.
+// This template implements a class for working with a Rust struct via a Pointer/Arc<T>
+// to the live Rust struct on the other side of the FFI.
 //
-// Such types expose a `destroy()` method that must be called to cleanly
-// dispose of the contained objects. Failure to call this method may result
-// in memory leaks.
-//
-// The easiest way to ensure this method is called is to use the `.use`
-// helper method to execute a block and destroy the object at the end.
-interface Disposable {
-    fun destroy()
-    companion object {
-        fun destroy(vararg args: Any?) {
-            args.filterIsInstance<Disposable>()
-                .forEach(Disposable::destroy)
-        }
-    }
-}
-
-inline fun <T : Disposable?, R> T.use(block: (T) -> R) =
-    try {
-        block(this)
-    } finally {
-        try {
-            // N.B. our implementation is on the nullable type `Disposable?`.
-            this?.destroy()
-        } catch (e: Throwable) {
-            // swallow
-        }
-    }
-
-// The base class for all UniFFI Object types.
-//
-// This class provides core operations for working with the Rust `Arc<T>` pointer to
-// the live Rust struct on the other side of the FFI.
+// Each instance implements core operations for working with the Rust `Arc<T>` and the
+// Kotlin Pointer to work with the live Rust struct on the other side of the FFI.
 //
 // There's some subtlety here, because we have to be careful not to operate on a Rust
 // struct after it has been dropped, and because we must expose a public API for freeing
-// the Kotlin wrapper object in lieu of reliable finalizers. The core requirements are:
+// theq Kotlin wrapper object in lieu of reliable finalizers. The core requirements are:
 //
-//   * Each `FFIObject` instance holds an opaque pointer to the underlying Rust struct.
+//   * Each instance holds an opaque pointer to the underlying Rust struct.
 //     Method calls need to read this pointer from the object's state and pass it in to
 //     the Rust FFI.
 //
-//   * When an `FFIObject` is no longer needed, its pointer should be passed to a
+//   * When an instance is no longer needed, its pointer should be passed to a
 //     special destructor function provided by the Rust FFI, which will drop the
 //     underlying Rust struct.
 //
-//   * Given an `FFIObject` instance, calling code is expected to call the special
+//   * Given an instance, calling code is expected to call the special
 //     `destroy` method in order to free it after use, either by calling it explicitly
-//     or by using a higher-level helper like the `use` method. Failing to do so will
-//     leak the underlying Rust struct.
+//     or by using a higher-level helper like the `use` method. Failing to do so risks
+//     leaking the underlying Rust struct.
 //
 //   * We can't assume that calling code will do the right thing, and must be prepared
 //     to handle Kotlin method calls executing concurrently with or even after a call to
@@ -863,6 +1474,14 @@ inline fun <T : Disposable?, R> T.use(block: (T) -> R) =
 //   * We must never allow Rust code to operate on the underlying Rust struct after
 //     the destructor has been called, and must never call the destructor more than once.
 //     Doing so may trigger memory unsafety.
+//
+//   * To mitigate many of the risks of leaking memory and use-after-free unsafety, a `Cleaner`
+//     is implemented to call the destructor when the Kotlin object becomes unreachable.
+//     This is done in a background thread. This is not a panacea, and client code should be aware that
+//      1. the thread may starve if some there are objects that have poorly performing
+//     `drop` methods or do significant work in their `drop` methods.
+//      2. the thread is shared across the whole library. This can be tuned by using `android_cleaner = true`,
+//         or `android = true` in the [`kotlin` section of the `uniffi.toml` file](https://mozilla.github.io/uniffi-rs/kotlin/configuration.html).
 //
 // If we try to implement this with mutual exclusion on access to the pointer, there is the
 // possibility of a race between a method call and a concurrent call to `destroy`:
@@ -879,7 +1498,7 @@ inline fun <T : Disposable?, R> T.use(block: (T) -> R) =
 // generate methods with any hidden blocking semantics, and a `destroy` method that might
 // block if called incorrectly seems to meet that bar.
 //
-// So, we achieve our goals by giving each `FFIObject` an associated `AtomicLong` counter to track
+// So, we achieve our goals by giving each instance an associated `AtomicLong` counter to track
 // the number of in-flight method calls, and an `AtomicBoolean` flag to indicate whether `destroy`
 // has been called. These are updated according to the following rules:
 //
@@ -905,26 +1524,53 @@ inline fun <T : Disposable?, R> T.use(block: (T) -> R) =
 // called *and* all in-flight method calls have completed, avoiding violating any of the expectations
 // of the underlying Rust code.
 //
-// In the future we may be able to replace some of this with automatic finalization logic, such as using
-// the new "Cleaner" functionaility in Java 9. The above scheme has been designed to work even if `destroy` is
-// invoked by garbage-collection machinery rather than by calling code (which by the way, it's apparently also
-// possible for the JVM to finalize an object while there is an in-flight call to one of its methods [1],
-// so there would still be some complexity here).
+// This makes a cleaner a better alternative to _not_ calling `destroy()` as
+// and when the object is finished with, but the abstraction is not perfect: if the Rust object's `drop`
+// method is slow, and/or there are many objects to cleanup, and it's on a low end Android device, then the cleaner
+// thread may be starved, and the app will leak memory.
 //
-// Sigh...all of this for want of a robust finalization mechanism.
+// In this case, `destroy`ing manually may be a better solution.
+//
+// The cleaner can live side by side with the manual calling of `destroy`. In the order of responsiveness, uniffi objects
+// with Rust peers are reclaimed:
+//
+// 1. By calling the `destroy` method of the object, which calls `rustObject.free()`. If that doesn't happen:
+// 2. When the object becomes unreachable, AND the Cleaner thread gets to call `rustObject.free()`. If the thread is starved then:
+// 3. The memory is reclaimed when the process terminates.
 //
 // [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
 //
-abstract class FFIObject(
-    protected val pointer: Pointer
-): Disposable, AutoCloseable {
+
+
+public interface EventNotifierInterface {
+    
+    companion object
+}
+
+open class EventNotifier: Disposable, AutoCloseable, EventNotifierInterface
+{
+
+    constructor(pointer: Pointer) {
+        this.pointer = pointer
+        this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(pointer))
+    }
+
+    /**
+     * This constructor can be used to instantiate a fake object. Only used for tests. Any
+     * attempt to actually use an object constructed this way will fail as there is no
+     * connected Rust object.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    constructor(noPointer: NoPointer) {
+        this.pointer = null
+        this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(pointer))
+    }
+
+    protected val pointer: Pointer?
+    protected val cleanable: UniffiCleaner.Cleanable
 
     private val wasDestroyed = AtomicBoolean(false)
     private val callCounter = AtomicLong(1)
-
-    open protected fun freeRustArcPtr() {
-        // To be overridden in subclasses.
-    }
 
     override fun destroy() {
         // Only allow a single call to this method.
@@ -932,7 +1578,7 @@ abstract class FFIObject(
         if (this.wasDestroyed.compareAndSet(false, true)) {
             // This decrement always matches the initial count of 1 given at creation time.
             if (this.callCounter.decrementAndGet() == 0L) {
-                this.freeRustArcPtr()
+                cleanable.clean()
             }
         }
     }
@@ -956,48 +1602,49 @@ abstract class FFIObject(
         } while (! this.callCounter.compareAndSet(c, c + 1L))
         // Now we can safely do the method call without the pointer being freed concurrently.
         try {
-            return block(this.pointer)
+            return block(this.uniffiClonePointer())
         } finally {
             // This decrement always matches the increment we performed above.
             if (this.callCounter.decrementAndGet() == 0L) {
-                this.freeRustArcPtr()
+                cleanable.clean()
             }
         }
     }
-}
 
-public interface EventNotifierInterface {
-    
-    companion object
-}
+    // Use a static inner class instead of a closure so as not to accidentally
+    // capture `this` as part of the cleanable's action.
+    private class UniffiCleanAction(private val pointer: Pointer?) : Runnable {
+        override fun run() {
+            pointer?.let { ptr ->
+                uniffiRustCall { status ->
+                    UniffiLib.INSTANCE.uniffi_pubkycore_fn_free_eventnotifier(ptr, status)
+                }
+            }
+        }
+    }
 
-class EventNotifier(
-    pointer: Pointer
-) : FFIObject(pointer), EventNotifierInterface {
-
-    /**
-     * Disconnect the object from the underlying Rust object.
-     *
-     * It can be called more than once, but once called, interacting with the object
-     * causes an `IllegalStateException`.
-     *
-     * Clients **must** call this method once done with the object, or cause a memory leak.
-     */
-    override protected fun freeRustArcPtr() {
-        rustCall() { status ->
-            _UniFFILib.INSTANCE.uniffi_pubkycore_fn_free_eventnotifier(this.pointer, status)
+    fun uniffiClonePointer(): Pointer {
+        return uniffiRustCall() { status ->
+            UniffiLib.INSTANCE.uniffi_pubkycore_fn_clone_eventnotifier(pointer!!, status)
         }
     }
 
     
 
     
+    
     companion object
     
 }
 
+/**
+ * @suppress
+ */
 public object FfiConverterTypeEventNotifier: FfiConverter<EventNotifier, Pointer> {
-    override fun lower(value: EventNotifier): Pointer = value.callWithPointer { it }
+
+    override fun lower(value: EventNotifier): Pointer {
+        return value.uniffiClonePointer()
+    }
 
     override fun lift(value: Pointer): EventNotifier {
         return EventNotifier(value)
@@ -1009,7 +1656,7 @@ public object FfiConverterTypeEventNotifier: FfiConverter<EventNotifier, Pointer
         return lift(Pointer(buf.getLong()))
     }
 
-    override fun allocationSize(value: EventNotifier) = 8
+    override fun allocationSize(value: EventNotifier) = 8UL
 
     override fun write(value: EventNotifier, buf: ByteBuffer) {
         // The Rust code always expects pointers written as 8 bytes,
@@ -1021,186 +1668,79 @@ public object FfiConverterTypeEventNotifier: FfiConverter<EventNotifier, Pointer
 
 
 
-internal typealias Handle = Long
-internal class ConcurrentHandleMap<T>(
-    private val leftMap: MutableMap<Handle, T> = mutableMapOf(),
-    private val rightMap: MutableMap<T, Handle> = mutableMapOf()
-) {
-    private val lock = java.util.concurrent.locks.ReentrantLock()
-    private val currentHandle = AtomicLong(0L)
-    private val stride = 1L
-
-    fun insert(obj: T): Handle =
-        lock.withLock {
-            rightMap[obj] ?:
-                currentHandle.getAndAdd(stride)
-                    .also { handle ->
-                        leftMap[handle] = obj
-                        rightMap[obj] = handle
-                    }
-            }
-
-    fun get(handle: Handle) = lock.withLock {
-        leftMap[handle]
-    }
-
-    fun delete(handle: Handle) {
-        this.remove(handle)
-    }
-
-    fun remove(handle: Handle): T? =
-        lock.withLock {
-            leftMap.remove(handle)?.let { obj ->
-                rightMap.remove(obj)
-                obj
-            }
-        }
-}
-
-interface ForeignCallback : com.sun.jna.Callback {
-    public fun callback(handle: Handle, method: Int, argsData: Pointer, argsLen: Int, outBuf: RustBufferByReference): Int
-}
-
-// Magic number for the Rust proxy to call using the same mechanism as every other method,
-// to free the callback once it's dropped by Rust.
-internal const val IDX_CALLBACK_FREE = 0
-// Callback return codes
-internal const val UNIFFI_CALLBACK_SUCCESS = 0
-internal const val UNIFFI_CALLBACK_ERROR = 1
-internal const val UNIFFI_CALLBACK_UNEXPECTED_ERROR = 2
-
-public abstract class FfiConverterCallbackInterface<CallbackInterface>(
-    protected val foreignCallback: ForeignCallback
-): FfiConverter<CallbackInterface, Handle> {
-    private val handleMap = ConcurrentHandleMap<CallbackInterface>()
-
-    // Registers the foreign callback with the Rust side.
-    // This method is generated for each callback interface.
-    internal abstract fun register(lib: _UniFFILib)
-
-    fun drop(handle: Handle): RustBuffer.ByValue {
-        return handleMap.remove(handle).let { RustBuffer.ByValue() }
-    }
-
-    override fun lift(value: Handle): CallbackInterface {
-        return handleMap.get(value) ?: throw InternalException("No callback in handlemap; this is a Uniffi bug")
-    }
-
-    override fun read(buf: ByteBuffer) = lift(buf.getLong())
-
-    override fun lower(value: CallbackInterface) =
-        handleMap.insert(value).also {
-            assert(handleMap.get(it) === value) { "Handle map is not returning the object we just placed there. This is a bug in the HandleMap." }
-        }
-
-    override fun allocationSize(value: CallbackInterface) = 8
-
-    override fun write(value: CallbackInterface, buf: ByteBuffer) {
-        buf.putLong(lower(value))
-    }
-}
-
-// Declaration and FfiConverters for EventListener Callback Interface
 
 public interface EventListener {
-    fun `onEventOccurred`(`eventData`: String)
+    
+    fun `onEventOccurred`(`eventData`: kotlin.String)
     
     companion object
 }
 
-// The ForeignCallback that is passed to Rust.
-internal class ForeignCallbackTypeEventListener : ForeignCallback {
-    @Suppress("TooGenericExceptionCaught")
-    override fun callback(handle: Handle, method: Int, argsData: Pointer, argsLen: Int, outBuf: RustBufferByReference): Int {
-        val cb = FfiConverterTypeEventListener.lift(handle)
-        return when (method) {
-            IDX_CALLBACK_FREE -> {
-                FfiConverterTypeEventListener.drop(handle)
-                // Successful return
-                // See docs of ForeignCallback in `uniffi_core/src/ffi/foreigncallbacks.rs`
-                UNIFFI_CALLBACK_SUCCESS
+
+
+// Put the implementation in an object so we don't pollute the top-level namespace
+internal object uniffiCallbackInterfaceEventListener {
+    internal object `onEventOccurred`: UniffiCallbackInterfaceEventListenerMethod0 {
+        override fun callback(`uniffiHandle`: Long,`eventData`: RustBuffer.ByValue,`uniffiOutReturn`: Pointer,uniffiCallStatus: UniffiRustCallStatus,) {
+            val uniffiObj = FfiConverterTypeEventListener.handleMap.get(uniffiHandle)
+            val makeCall = { ->
+                uniffiObj.`onEventOccurred`(
+                    FfiConverterString.lift(`eventData`),
+                )
             }
-            1 -> {
-                // Call the method, write to outBuf and return a status code
-                // See docs of ForeignCallback in `uniffi_core/src/ffi/foreigncallbacks.rs` for info
-                try {
-                    this.`invokeOnEventOccurred`(cb, argsData, argsLen, outBuf)
-                } catch (e: Throwable) {
-                    // Unexpected error
-                    try {
-                        // Try to serialize the error into a string
-                        outBuf.setValue(FfiConverterString.lower(e.toString()))
-                    } catch (e: Throwable) {
-                        // If that fails, then it's time to give up and just return
-                    }
-                    UNIFFI_CALLBACK_UNEXPECTED_ERROR
-                }
-            }
-            
-            else -> {
-                // An unexpected error happened.
-                // See docs of ForeignCallback in `uniffi_core/src/ffi/foreigncallbacks.rs`
-                try {
-                    // Try to serialize the error into a string
-                    outBuf.setValue(FfiConverterString.lower("Invalid Callback index"))
-                } catch (e: Throwable) {
-                    // If that fails, then it's time to give up and just return
-                }
-                UNIFFI_CALLBACK_UNEXPECTED_ERROR
-            }
+            val writeReturn = { _: Unit -> Unit }
+            uniffiTraitInterfaceCall(uniffiCallStatus, makeCall, writeReturn)
         }
     }
 
-    
-    @Suppress("UNUSED_PARAMETER")
-    private fun `invokeOnEventOccurred`(kotlinCallbackInterface: EventListener, argsData: Pointer, argsLen: Int, outBuf: RustBufferByReference): Int {
-        val argsBuf = argsData.getByteBuffer(0, argsLen.toLong()).also {
-            it.order(ByteOrder.BIG_ENDIAN)
+    internal object uniffiFree: UniffiCallbackInterfaceFree {
+        override fun callback(handle: Long) {
+            FfiConverterTypeEventListener.handleMap.remove(handle)
         }
-        fun makeCall() : Int {
-            kotlinCallbackInterface.`onEventOccurred`(
-                FfiConverterString.read(argsBuf)
-            )
-            return UNIFFI_CALLBACK_SUCCESS
-        }
-        fun makeCallAndHandleError() : Int = makeCall()
-
-        return makeCallAndHandleError()
     }
-    
-}
 
-// The ffiConverter which transforms the Callbacks in to Handles to pass to Rust.
-public object FfiConverterTypeEventListener: FfiConverterCallbackInterface<EventListener>(
-    foreignCallback = ForeignCallbackTypeEventListener()
-) {
-    override fun register(lib: _UniFFILib) {
-        rustCall() { status ->
-            lib.uniffi_pubkycore_fn_init_callback_eventlistener(this.foreignCallback, status)
-        }
+    internal var vtable = UniffiVTableCallbackInterfaceEventListener.UniffiByValue(
+        `onEventOccurred`,
+        uniffiFree,
+    )
+
+    // Registers the foreign callback with the Rust side.
+    // This method is generated for each callback interface.
+    internal fun register(lib: UniffiLib) {
+        lib.uniffi_pubkycore_fn_init_callback_vtable_eventlistener(vtable)
     }
 }
 
+/**
+ * The ffiConverter which transforms the Callbacks in to handles to pass to Rust.
+ *
+ * @suppress
+ */
+public object FfiConverterTypeEventListener: FfiConverterCallbackInterface<EventListener>()
 
 
 
-public object FfiConverterOptionalString: FfiConverterRustBuffer<String?> {
-    override fun read(buf: ByteBuffer): String? {
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalString: FfiConverterRustBuffer<kotlin.String?> {
+    override fun read(buf: ByteBuffer): kotlin.String? {
         if (buf.get().toInt() == 0) {
             return null
         }
         return FfiConverterString.read(buf)
     }
 
-    override fun allocationSize(value: String?): Int {
+    override fun allocationSize(value: kotlin.String?): ULong {
         if (value == null) {
-            return 1
+            return 1UL
         } else {
-            return 1 + FfiConverterString.allocationSize(value)
+            return 1UL + FfiConverterString.allocationSize(value)
         }
     }
 
-    override fun write(value: String?, buf: ByteBuffer) {
+    override fun write(value: kotlin.String?, buf: ByteBuffer) {
         if (value == null) {
             buf.put(0)
         } else {
@@ -1213,249 +1753,285 @@ public object FfiConverterOptionalString: FfiConverterRustBuffer<String?> {
 
 
 
-public object FfiConverterSequenceString: FfiConverterRustBuffer<List<String>> {
-    override fun read(buf: ByteBuffer): List<String> {
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceString: FfiConverterRustBuffer<List<kotlin.String>> {
+    override fun read(buf: ByteBuffer): List<kotlin.String> {
         val len = buf.getInt()
-        return List<String>(len) {
+        return List<kotlin.String>(len) {
             FfiConverterString.read(buf)
         }
     }
 
-    override fun allocationSize(value: List<String>): Int {
-        val sizeForLength = 4
+    override fun allocationSize(value: List<kotlin.String>): ULong {
+        val sizeForLength = 4UL
         val sizeForItems = value.map { FfiConverterString.allocationSize(it) }.sum()
         return sizeForLength + sizeForItems
     }
 
-    override fun write(value: List<String>, buf: ByteBuffer) {
+    override fun write(value: List<kotlin.String>, buf: ByteBuffer) {
         buf.putInt(value.size)
-        value.forEach {
+        value.iterator().forEach {
             FfiConverterString.write(it, buf)
         }
     }
+} fun `auth`(`url`: kotlin.String, `secretKey`: kotlin.String): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_pubkycore_fn_func_auth(
+        FfiConverterString.lower(`url`),FfiConverterString.lower(`secretKey`),_status)
 }
-
-fun `auth`(`url`: String, `secretKey`: String): List<String> {
-    return FfiConverterSequenceString.lift(
-    rustCall() { _status ->
-    _UniFFILib.INSTANCE.uniffi_pubkycore_fn_func_auth(FfiConverterString.lower(`url`),FfiConverterString.lower(`secretKey`),_status)
-})
-}
-
-
-fun `createRecoveryFile`(`secretKey`: String, `passphrase`: String): List<String> {
-    return FfiConverterSequenceString.lift(
-    rustCall() { _status ->
-    _UniFFILib.INSTANCE.uniffi_pubkycore_fn_func_create_recovery_file(FfiConverterString.lower(`secretKey`),FfiConverterString.lower(`passphrase`),_status)
-})
-}
-
-
-fun `decryptRecoveryFile`(`recoveryFile`: String, `passphrase`: String): List<String> {
-    return FfiConverterSequenceString.lift(
-    rustCall() { _status ->
-    _UniFFILib.INSTANCE.uniffi_pubkycore_fn_func_decrypt_recovery_file(FfiConverterString.lower(`recoveryFile`),FfiConverterString.lower(`passphrase`),_status)
-})
-}
-
-
-fun `deleteFile`(`url`: String): List<String> {
-    return FfiConverterSequenceString.lift(
-    rustCall() { _status ->
-    _UniFFILib.INSTANCE.uniffi_pubkycore_fn_func_delete_file(FfiConverterString.lower(`url`),_status)
-})
-}
-
-
-fun `generateMnemonicPhrase`(): List<String> {
-    return FfiConverterSequenceString.lift(
-    rustCall() { _status ->
-    _UniFFILib.INSTANCE.uniffi_pubkycore_fn_func_generate_mnemonic_phrase(_status)
-})
-}
-
-
-fun `generateMnemonicPhraseAndKeypair`(): List<String> {
-    return FfiConverterSequenceString.lift(
-    rustCall() { _status ->
-    _UniFFILib.INSTANCE.uniffi_pubkycore_fn_func_generate_mnemonic_phrase_and_keypair(_status)
-})
-}
-
-
-fun `generateSecretKey`(): List<String> {
-    return FfiConverterSequenceString.lift(
-    rustCall() { _status ->
-    _UniFFILib.INSTANCE.uniffi_pubkycore_fn_func_generate_secret_key(_status)
-})
-}
-
-
-fun `get`(`url`: String): List<String> {
-    return FfiConverterSequenceString.lift(
-    rustCall() { _status ->
-    _UniFFILib.INSTANCE.uniffi_pubkycore_fn_func_get(FfiConverterString.lower(`url`),_status)
-})
-}
-
-
-fun `getHomeserver`(`pubky`: String): List<String> {
-    return FfiConverterSequenceString.lift(
-    rustCall() { _status ->
-    _UniFFILib.INSTANCE.uniffi_pubkycore_fn_func_get_homeserver(FfiConverterString.lower(`pubky`),_status)
-})
-}
-
-
-fun `getPublicKeyFromSecretKey`(`secretKey`: String): List<String> {
-    return FfiConverterSequenceString.lift(
-    rustCall() { _status ->
-    _UniFFILib.INSTANCE.uniffi_pubkycore_fn_func_get_public_key_from_secret_key(FfiConverterString.lower(`secretKey`),_status)
-})
-}
-
-
-fun `getSignupToken`(`homeserverPubky`: String, `adminPassword`: String): List<String> {
-    return FfiConverterSequenceString.lift(
-    rustCall() { _status ->
-    _UniFFILib.INSTANCE.uniffi_pubkycore_fn_func_get_signup_token(FfiConverterString.lower(`homeserverPubky`),FfiConverterString.lower(`adminPassword`),_status)
-})
-}
-
-
-fun `list`(`url`: String): List<String> {
-    return FfiConverterSequenceString.lift(
-    rustCall() { _status ->
-    _UniFFILib.INSTANCE.uniffi_pubkycore_fn_func_list(FfiConverterString.lower(`url`),_status)
-})
-}
-
-
-fun `mnemonicPhraseToKeypair`(`mnemonicPhrase`: String): List<String> {
-    return FfiConverterSequenceString.lift(
-    rustCall() { _status ->
-    _UniFFILib.INSTANCE.uniffi_pubkycore_fn_func_mnemonic_phrase_to_keypair(FfiConverterString.lower(`mnemonicPhrase`),_status)
-})
-}
-
-
-fun `parseAuthUrl`(`url`: String): List<String> {
-    return FfiConverterSequenceString.lift(
-    rustCall() { _status ->
-    _UniFFILib.INSTANCE.uniffi_pubkycore_fn_func_parse_auth_url(FfiConverterString.lower(`url`),_status)
-})
-}
-
-
-fun `publish`(`recordName`: String, `recordContent`: String, `secretKey`: String): List<String> {
-    return FfiConverterSequenceString.lift(
-    rustCall() { _status ->
-    _UniFFILib.INSTANCE.uniffi_pubkycore_fn_func_publish(FfiConverterString.lower(`recordName`),FfiConverterString.lower(`recordContent`),FfiConverterString.lower(`secretKey`),_status)
-})
-}
-
-
-fun `publishHttps`(`recordName`: String, `target`: String, `secretKey`: String): List<String> {
-    return FfiConverterSequenceString.lift(
-    rustCall() { _status ->
-    _UniFFILib.INSTANCE.uniffi_pubkycore_fn_func_publish_https(FfiConverterString.lower(`recordName`),FfiConverterString.lower(`target`),FfiConverterString.lower(`secretKey`),_status)
-})
-}
-
-
-fun `put`(`url`: String, `content`: String): List<String> {
-    return FfiConverterSequenceString.lift(
-    rustCall() { _status ->
-    _UniFFILib.INSTANCE.uniffi_pubkycore_fn_func_put(FfiConverterString.lower(`url`),FfiConverterString.lower(`content`),_status)
-})
-}
-
-
-fun `removeEventListener`() =
+    )
+    }
     
-    rustCall() { _status ->
-    _UniFFILib.INSTANCE.uniffi_pubkycore_fn_func_remove_event_listener(_status)
+ fun `createRecoveryFile`(`secretKey`: kotlin.String, `passphrase`: kotlin.String): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_pubkycore_fn_func_create_recovery_file(
+        FfiConverterString.lower(`secretKey`),FfiConverterString.lower(`passphrase`),_status)
 }
-
-
-
-fun `republishHomeserver`(`secretKey`: String, `homeserver`: String): List<String> {
-    return FfiConverterSequenceString.lift(
-    rustCall() { _status ->
-    _UniFFILib.INSTANCE.uniffi_pubkycore_fn_func_republish_homeserver(FfiConverterString.lower(`secretKey`),FfiConverterString.lower(`homeserver`),_status)
-})
-}
-
-
-fun `resolve`(`publicKey`: String): List<String> {
-    return FfiConverterSequenceString.lift(
-    rustCall() { _status ->
-    _UniFFILib.INSTANCE.uniffi_pubkycore_fn_func_resolve(FfiConverterString.lower(`publicKey`),_status)
-})
-}
-
-
-fun `resolveHttps`(`publicKey`: String): List<String> {
-    return FfiConverterSequenceString.lift(
-    rustCall() { _status ->
-    _UniFFILib.INSTANCE.uniffi_pubkycore_fn_func_resolve_https(FfiConverterString.lower(`publicKey`),_status)
-})
-}
-
-
-fun `session`(`pubky`: String): List<String> {
-    return FfiConverterSequenceString.lift(
-    rustCall() { _status ->
-    _UniFFILib.INSTANCE.uniffi_pubkycore_fn_func_session(FfiConverterString.lower(`pubky`),_status)
-})
-}
-
-
-fun `setEventListener`(`listener`: EventListener) =
+    )
+    }
     
-    rustCall() { _status ->
-    _UniFFILib.INSTANCE.uniffi_pubkycore_fn_func_set_event_listener(FfiConverterTypeEventListener.lower(`listener`),_status)
+ fun `decryptRecoveryFile`(`recoveryFile`: kotlin.String, `passphrase`: kotlin.String): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_pubkycore_fn_func_decrypt_recovery_file(
+        FfiConverterString.lower(`recoveryFile`),FfiConverterString.lower(`passphrase`),_status)
 }
-
-
-
-fun `signIn`(`secretKey`: String): List<String> {
-    return FfiConverterSequenceString.lift(
-    rustCall() { _status ->
-    _UniFFILib.INSTANCE.uniffi_pubkycore_fn_func_sign_in(FfiConverterString.lower(`secretKey`),_status)
-})
+    )
+    }
+    
+ fun `deleteFile`(`url`: kotlin.String, `secretKey`: kotlin.String): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_pubkycore_fn_func_delete_file(
+        FfiConverterString.lower(`url`),FfiConverterString.lower(`secretKey`),_status)
 }
-
-
-fun `signOut`(`secretKey`: String): List<String> {
-    return FfiConverterSequenceString.lift(
-    rustCall() { _status ->
-    _UniFFILib.INSTANCE.uniffi_pubkycore_fn_func_sign_out(FfiConverterString.lower(`secretKey`),_status)
-})
+    )
+    }
+    
+ fun `generateMnemonicPhrase`(): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_pubkycore_fn_func_generate_mnemonic_phrase(
+        _status)
 }
-
-
-fun `signUp`(`secretKey`: String, `homeserver`: String, `signupToken`: String?): List<String> {
-    return FfiConverterSequenceString.lift(
-    rustCall() { _status ->
-    _UniFFILib.INSTANCE.uniffi_pubkycore_fn_func_sign_up(FfiConverterString.lower(`secretKey`),FfiConverterString.lower(`homeserver`),FfiConverterOptionalString.lower(`signupToken`),_status)
-})
+    )
+    }
+    
+ fun `generateMnemonicPhraseAndKeypair`(): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_pubkycore_fn_func_generate_mnemonic_phrase_and_keypair(
+        _status)
 }
-
-
-fun `switchNetwork`(`useTestnet`: Boolean): List<String> {
-    return FfiConverterSequenceString.lift(
-    rustCall() { _status ->
-    _UniFFILib.INSTANCE.uniffi_pubkycore_fn_func_switch_network(FfiConverterBoolean.lower(`useTestnet`),_status)
-})
+    )
+    }
+    
+ fun `generateSecretKey`(): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_pubkycore_fn_func_generate_secret_key(
+        _status)
 }
-
-
-fun `validateMnemonicPhrase`(`mnemonicPhrase`: String): List<String> {
-    return FfiConverterSequenceString.lift(
-    rustCall() { _status ->
-    _UniFFILib.INSTANCE.uniffi_pubkycore_fn_func_validate_mnemonic_phrase(FfiConverterString.lower(`mnemonicPhrase`),_status)
-})
+    )
+    }
+    
+ fun `get`(`url`: kotlin.String): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_pubkycore_fn_func_get(
+        FfiConverterString.lower(`url`),_status)
 }
+    )
+    }
+    
+ fun `getHomeserver`(`pubky`: kotlin.String): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_pubkycore_fn_func_get_homeserver(
+        FfiConverterString.lower(`pubky`),_status)
+}
+    )
+    }
+    
+ fun `getPublicKeyFromSecretKey`(`secretKey`: kotlin.String): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_pubkycore_fn_func_get_public_key_from_secret_key(
+        FfiConverterString.lower(`secretKey`),_status)
+}
+    )
+    }
+    
+ fun `getSignupToken`(`homeserverPubky`: kotlin.String, `adminPassword`: kotlin.String): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_pubkycore_fn_func_get_signup_token(
+        FfiConverterString.lower(`homeserverPubky`),FfiConverterString.lower(`adminPassword`),_status)
+}
+    )
+    }
+    
+ fun `list`(`url`: kotlin.String): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_pubkycore_fn_func_list(
+        FfiConverterString.lower(`url`),_status)
+}
+    )
+    }
+    
+ fun `mnemonicPhraseToKeypair`(`mnemonicPhrase`: kotlin.String): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_pubkycore_fn_func_mnemonic_phrase_to_keypair(
+        FfiConverterString.lower(`mnemonicPhrase`),_status)
+}
+    )
+    }
+    
+ fun `parseAuthUrl`(`url`: kotlin.String): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_pubkycore_fn_func_parse_auth_url(
+        FfiConverterString.lower(`url`),_status)
+}
+    )
+    }
+    
+ fun `publish`(`recordName`: kotlin.String, `recordContent`: kotlin.String, `secretKey`: kotlin.String): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_pubkycore_fn_func_publish(
+        FfiConverterString.lower(`recordName`),FfiConverterString.lower(`recordContent`),FfiConverterString.lower(`secretKey`),_status)
+}
+    )
+    }
+    
+ fun `publishHttps`(`recordName`: kotlin.String, `target`: kotlin.String, `secretKey`: kotlin.String): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_pubkycore_fn_func_publish_https(
+        FfiConverterString.lower(`recordName`),FfiConverterString.lower(`target`),FfiConverterString.lower(`secretKey`),_status)
+}
+    )
+    }
+    
+ fun `put`(`url`: kotlin.String, `content`: kotlin.String, `secretKey`: kotlin.String): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_pubkycore_fn_func_put(
+        FfiConverterString.lower(`url`),FfiConverterString.lower(`content`),FfiConverterString.lower(`secretKey`),_status)
+}
+    )
+    }
+    
+ fun `removeEventListener`()
+        = 
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_pubkycore_fn_func_remove_event_listener(
+        _status)
+}
+    
+    
+ fun `republishHomeserver`(`secretKey`: kotlin.String, `homeserver`: kotlin.String): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_pubkycore_fn_func_republish_homeserver(
+        FfiConverterString.lower(`secretKey`),FfiConverterString.lower(`homeserver`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * * Resolve a signed packet from a public key
+         * * @param public_key The public key to resolve
+         * * @returns A vector with two elements: the first element is a boolean indicating success or failure,
+         * * and the second element is the response data (either an error message or the resolved signed packet)
+         * *
+         */ fun `resolve`(`publicKey`: kotlin.String): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_pubkycore_fn_func_resolve(
+        FfiConverterString.lower(`publicKey`),_status)
+}
+    )
+    }
+    
+ fun `resolveHttps`(`publicKey`: kotlin.String): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_pubkycore_fn_func_resolve_https(
+        FfiConverterString.lower(`publicKey`),_status)
+}
+    )
+    }
+    
+ fun `revalidateSession`(`sessionSecret`: kotlin.String): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_pubkycore_fn_func_revalidate_session(
+        FfiConverterString.lower(`sessionSecret`),_status)
+}
+    )
+    }
+    
+ fun `setEventListener`(`listener`: EventListener)
+        = 
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_pubkycore_fn_func_set_event_listener(
+        FfiConverterTypeEventListener.lower(`listener`),_status)
+}
+    
+    
+ fun `signIn`(`secretKey`: kotlin.String): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_pubkycore_fn_func_sign_in(
+        FfiConverterString.lower(`secretKey`),_status)
+}
+    )
+    }
+    
+ fun `signOut`(`sessionSecret`: kotlin.String): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_pubkycore_fn_func_sign_out(
+        FfiConverterString.lower(`sessionSecret`),_status)
+}
+    )
+    }
+    
+ fun `signUp`(`secretKey`: kotlin.String, `homeserver`: kotlin.String, `signupToken`: kotlin.String?): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_pubkycore_fn_func_sign_up(
+        FfiConverterString.lower(`secretKey`),FfiConverterString.lower(`homeserver`),FfiConverterOptionalString.lower(`signupToken`),_status)
+}
+    )
+    }
+    
+ fun `switchNetwork`(`useTestnet`: kotlin.Boolean): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_pubkycore_fn_func_switch_network(
+        FfiConverterBoolean.lower(`useTestnet`),_status)
+}
+    )
+    }
+    
+ fun `validateMnemonicPhrase`(`mnemonicPhrase`: kotlin.String): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_pubkycore_fn_func_validate_mnemonic_phrase(
+        FfiConverterString.lower(`mnemonicPhrase`),_status)
+}
+    )
+    }
+    
 
 
