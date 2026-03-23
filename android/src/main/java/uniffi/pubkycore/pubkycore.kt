@@ -392,11 +392,15 @@ internal interface _UniFFILib : Library {
     ): Unit
     fun uniffi_pubkycore_fn_func_auth(`url`: RustBuffer.ByValue,`secretKey`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
+    fun uniffi_pubkycore_fn_func_await_auth_approval(_uniffi_out_err: RustCallStatus, 
+    ): RustBuffer.ByValue
     fun uniffi_pubkycore_fn_func_create_recovery_file(`secretKey`: RustBuffer.ByValue,`passphrase`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_pubkycore_fn_func_decrypt_recovery_file(`recoveryFile`: RustBuffer.ByValue,`passphrase`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_pubkycore_fn_func_delete_file(`url`: RustBuffer.ByValue,`secretKey`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
+    ): RustBuffer.ByValue
+    fun uniffi_pubkycore_fn_func_delete_with_session(`url`: RustBuffer.ByValue,`sessionSecret`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_pubkycore_fn_func_generate_mnemonic_phrase(_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
@@ -424,6 +428,8 @@ internal interface _UniFFILib : Library {
     ): RustBuffer.ByValue
     fun uniffi_pubkycore_fn_func_put(`url`: RustBuffer.ByValue,`content`: RustBuffer.ByValue,`secretKey`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
+    fun uniffi_pubkycore_fn_func_put_with_session(`url`: RustBuffer.ByValue,`content`: RustBuffer.ByValue,`sessionSecret`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
+    ): RustBuffer.ByValue
     fun uniffi_pubkycore_fn_func_remove_event_listener(_uniffi_out_err: RustCallStatus, 
     ): Unit
     fun uniffi_pubkycore_fn_func_republish_homeserver(`secretKey`: RustBuffer.ByValue,`homeserver`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
@@ -441,6 +447,8 @@ internal interface _UniFFILib : Library {
     fun uniffi_pubkycore_fn_func_sign_out(`sessionSecret`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_pubkycore_fn_func_sign_up(`secretKey`: RustBuffer.ByValue,`homeserver`: RustBuffer.ByValue,`signupToken`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
+    ): RustBuffer.ByValue
+    fun uniffi_pubkycore_fn_func_start_auth_flow(`capabilitiesStr`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_pubkycore_fn_func_switch_network(`useTestnet`: Byte,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
@@ -562,11 +570,15 @@ internal interface _UniFFILib : Library {
     ): Unit
     fun uniffi_pubkycore_checksum_func_auth(
     ): Short
+    fun uniffi_pubkycore_checksum_func_await_auth_approval(
+    ): Short
     fun uniffi_pubkycore_checksum_func_create_recovery_file(
     ): Short
     fun uniffi_pubkycore_checksum_func_decrypt_recovery_file(
     ): Short
     fun uniffi_pubkycore_checksum_func_delete_file(
+    ): Short
+    fun uniffi_pubkycore_checksum_func_delete_with_session(
     ): Short
     fun uniffi_pubkycore_checksum_func_generate_mnemonic_phrase(
     ): Short
@@ -594,6 +606,8 @@ internal interface _UniFFILib : Library {
     ): Short
     fun uniffi_pubkycore_checksum_func_put(
     ): Short
+    fun uniffi_pubkycore_checksum_func_put_with_session(
+    ): Short
     fun uniffi_pubkycore_checksum_func_remove_event_listener(
     ): Short
     fun uniffi_pubkycore_checksum_func_republish_homeserver(
@@ -611,6 +625,8 @@ internal interface _UniFFILib : Library {
     fun uniffi_pubkycore_checksum_func_sign_out(
     ): Short
     fun uniffi_pubkycore_checksum_func_sign_up(
+    ): Short
+    fun uniffi_pubkycore_checksum_func_start_auth_flow(
     ): Short
     fun uniffi_pubkycore_checksum_func_switch_network(
     ): Short
@@ -638,6 +654,9 @@ private fun uniffiCheckApiChecksums(lib: _UniFFILib) {
     if (lib.uniffi_pubkycore_checksum_func_auth() != 51826.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_pubkycore_checksum_func_await_auth_approval() != 56488.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_pubkycore_checksum_func_create_recovery_file() != 48846.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -645,6 +664,9 @@ private fun uniffiCheckApiChecksums(lib: _UniFFILib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_pubkycore_checksum_func_delete_file() != 47931.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_pubkycore_checksum_func_delete_with_session() != 26332.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_pubkycore_checksum_func_generate_mnemonic_phrase() != 2358.toShort()) {
@@ -686,6 +708,9 @@ private fun uniffiCheckApiChecksums(lib: _UniFFILib) {
     if (lib.uniffi_pubkycore_checksum_func_put() != 64514.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_pubkycore_checksum_func_put_with_session() != 17390.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_pubkycore_checksum_func_remove_event_listener() != 23534.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -711,6 +736,9 @@ private fun uniffiCheckApiChecksums(lib: _UniFFILib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_pubkycore_checksum_func_sign_up() != 48789.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_pubkycore_checksum_func_start_auth_flow() != 25681.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_pubkycore_checksum_func_switch_network() != 64215.toShort()) {
@@ -1243,6 +1271,14 @@ fun `auth`(`url`: String, `secretKey`: String): List<String> {
 }
 
 
+fun `awaitAuthApproval`(): List<String> {
+    return FfiConverterSequenceString.lift(
+    rustCall() { _status ->
+    _UniFFILib.INSTANCE.uniffi_pubkycore_fn_func_await_auth_approval(_status)
+})
+}
+
+
 fun `createRecoveryFile`(`secretKey`: String, `passphrase`: String): List<String> {
     return FfiConverterSequenceString.lift(
     rustCall() { _status ->
@@ -1263,6 +1299,14 @@ fun `deleteFile`(`url`: String, `secretKey`: String): List<String> {
     return FfiConverterSequenceString.lift(
     rustCall() { _status ->
     _UniFFILib.INSTANCE.uniffi_pubkycore_fn_func_delete_file(FfiConverterString.lower(`url`),FfiConverterString.lower(`secretKey`),_status)
+})
+}
+
+
+fun `deleteWithSession`(`url`: String, `sessionSecret`: String): List<String> {
+    return FfiConverterSequenceString.lift(
+    rustCall() { _status ->
+    _UniFFILib.INSTANCE.uniffi_pubkycore_fn_func_delete_with_session(FfiConverterString.lower(`url`),FfiConverterString.lower(`sessionSecret`),_status)
 })
 }
 
@@ -1371,6 +1415,14 @@ fun `put`(`url`: String, `content`: String, `secretKey`: String): List<String> {
 }
 
 
+fun `putWithSession`(`url`: String, `content`: String, `sessionSecret`: String): List<String> {
+    return FfiConverterSequenceString.lift(
+    rustCall() { _status ->
+    _UniFFILib.INSTANCE.uniffi_pubkycore_fn_func_put_with_session(FfiConverterString.lower(`url`),FfiConverterString.lower(`content`),FfiConverterString.lower(`sessionSecret`),_status)
+})
+}
+
+
 fun `removeEventListener`() =
     
     rustCall() { _status ->
@@ -1439,6 +1491,14 @@ fun `signUp`(`secretKey`: String, `homeserver`: String, `signupToken`: String?):
     return FfiConverterSequenceString.lift(
     rustCall() { _status ->
     _UniFFILib.INSTANCE.uniffi_pubkycore_fn_func_sign_up(FfiConverterString.lower(`secretKey`),FfiConverterString.lower(`homeserver`),FfiConverterOptionalString.lower(`signupToken`),_status)
+})
+}
+
+
+fun `startAuthFlow`(`capabilitiesStr`: String): List<String> {
+    return FfiConverterSequenceString.lift(
+    rustCall() { _status ->
+    _UniFFILib.INSTANCE.uniffi_pubkycore_fn_func_start_auth_flow(FfiConverterString.lower(`capabilitiesStr`),_status)
 })
 }
 
