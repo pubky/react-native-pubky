@@ -455,3 +455,60 @@ export async function validateMnemonicPhrase(
     return err(JSON.stringify(e));
   }
 }
+
+export async function startAuthFlow(
+  capabilities: string
+): Promise<Result<string>> {
+  try {
+    const res = await Pubky.startAuthFlow(capabilities);
+    if (res[0] === 'error') {
+      return err(res[1]);
+    }
+    return ok(res[1]);
+  } catch (e) {
+    return err(JSON.stringify(e));
+  }
+}
+
+export async function awaitAuthApproval(): Promise<Result<SessionInfo>> {
+  try {
+    const res = await Pubky.awaitAuthApproval();
+    if (res[0] === 'error') {
+      return err(res[1]);
+    }
+    return ok(JSON.parse(res[1]));
+  } catch (e) {
+    return err(JSON.stringify(e));
+  }
+}
+
+export async function putWithSession(
+  url: string,
+  content: string,
+  sessionSecret: string
+): Promise<Result<string>> {
+  try {
+    const res = await Pubky.putWithSession(url, content, sessionSecret);
+    if (res[0] === 'error') {
+      return err(res[1]);
+    }
+    return ok(res[1]);
+  } catch (e) {
+    return err(JSON.stringify(e));
+  }
+}
+
+export async function deleteWithSession(
+  url: string,
+  sessionSecret: string
+): Promise<Result<string>> {
+  try {
+    const res = await Pubky.deleteWithSession(url, sessionSecret);
+    if (res[0] === 'error') {
+      return err(res[1]);
+    }
+    return ok(res[1]);
+  } catch (e) {
+    return err(JSON.stringify(e));
+  }
+}

@@ -632,6 +632,14 @@ public func auth(url: String, secretKey: String) -> [String] {
     )
 }
 
+public func awaitAuthApproval() -> [String] {
+    return try! FfiConverterSequenceString.lift(
+        try! rustCall {
+            uniffi_pubkycore_fn_func_await_auth_approval($0)
+        }
+    )
+}
+
 public func createRecoveryFile(secretKey: String, passphrase: String) -> [String] {
     return try! FfiConverterSequenceString.lift(
         try! rustCall {
@@ -660,6 +668,17 @@ public func deleteFile(url: String, secretKey: String) -> [String] {
             uniffi_pubkycore_fn_func_delete_file(
                 FfiConverterString.lower(url),
                 FfiConverterString.lower(secretKey), $0
+            )
+        }
+    )
+}
+
+public func deleteWithSession(url: String, sessionSecret: String) -> [String] {
+    return try! FfiConverterSequenceString.lift(
+        try! rustCall {
+            uniffi_pubkycore_fn_func_delete_with_session(
+                FfiConverterString.lower(url),
+                FfiConverterString.lower(sessionSecret), $0
             )
         }
     )
@@ -796,6 +815,18 @@ public func put(url: String, content: String, secretKey: String) -> [String] {
     )
 }
 
+public func putWithSession(url: String, content: String, sessionSecret: String) -> [String] {
+    return try! FfiConverterSequenceString.lift(
+        try! rustCall {
+            uniffi_pubkycore_fn_func_put_with_session(
+                FfiConverterString.lower(url),
+                FfiConverterString.lower(content),
+                FfiConverterString.lower(sessionSecret), $0
+            )
+        }
+    )
+}
+
 public func removeEventListener() {
     try! rustCall {
         uniffi_pubkycore_fn_func_remove_event_listener($0)
@@ -883,6 +914,16 @@ public func signUp(secretKey: String, homeserver: String, signupToken: String?) 
     )
 }
 
+public func startAuthFlow(capabilitiesStr: String) -> [String] {
+    return try! FfiConverterSequenceString.lift(
+        try! rustCall {
+            uniffi_pubkycore_fn_func_start_auth_flow(
+                FfiConverterString.lower(capabilitiesStr), $0
+            )
+        }
+    )
+}
+
 public func switchNetwork(useTestnet: Bool) -> [String] {
     return try! FfiConverterSequenceString.lift(
         try! rustCall {
@@ -922,6 +963,9 @@ private var initializationResult: InitializationResult {
     if uniffi_pubkycore_checksum_func_auth() != 51826 {
         return InitializationResult.apiChecksumMismatch
     }
+    if uniffi_pubkycore_checksum_func_await_auth_approval() != 56488 {
+        return InitializationResult.apiChecksumMismatch
+    }
     if uniffi_pubkycore_checksum_func_create_recovery_file() != 48846 {
         return InitializationResult.apiChecksumMismatch
     }
@@ -929,6 +973,9 @@ private var initializationResult: InitializationResult {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_pubkycore_checksum_func_delete_file() != 47931 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_pubkycore_checksum_func_delete_with_session() != 26332 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_pubkycore_checksum_func_generate_mnemonic_phrase() != 2358 {
@@ -970,6 +1017,9 @@ private var initializationResult: InitializationResult {
     if uniffi_pubkycore_checksum_func_put() != 64514 {
         return InitializationResult.apiChecksumMismatch
     }
+    if uniffi_pubkycore_checksum_func_put_with_session() != 17390 {
+        return InitializationResult.apiChecksumMismatch
+    }
     if uniffi_pubkycore_checksum_func_remove_event_listener() != 23534 {
         return InitializationResult.apiChecksumMismatch
     }
@@ -995,6 +1045,9 @@ private var initializationResult: InitializationResult {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_pubkycore_checksum_func_sign_up() != 48789 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_pubkycore_checksum_func_start_auth_flow() != 25681 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_pubkycore_checksum_func_switch_network() != 64215 {
