@@ -69,11 +69,16 @@ void uniffi_pubkycore_fn_init_callback_eventlistener(ForeignCallback _Nonnull ca
 );
 RustBuffer uniffi_pubkycore_fn_func_auth(RustBuffer url, RustBuffer secret_key, RustCallStatus *_Nonnull out_status
 );
+RustBuffer uniffi_pubkycore_fn_func_await_auth_approval(RustCallStatus *_Nonnull out_status
+    
+);
 RustBuffer uniffi_pubkycore_fn_func_create_recovery_file(RustBuffer secret_key, RustBuffer passphrase, RustCallStatus *_Nonnull out_status
 );
 RustBuffer uniffi_pubkycore_fn_func_decrypt_recovery_file(RustBuffer recovery_file, RustBuffer passphrase, RustCallStatus *_Nonnull out_status
 );
 RustBuffer uniffi_pubkycore_fn_func_delete_file(RustBuffer url, RustBuffer secret_key, RustCallStatus *_Nonnull out_status
+);
+RustBuffer uniffi_pubkycore_fn_func_delete_with_session(RustBuffer url, RustBuffer session_secret, RustCallStatus *_Nonnull out_status
 );
 RustBuffer uniffi_pubkycore_fn_func_generate_mnemonic_phrase(RustCallStatus *_Nonnull out_status
     
@@ -104,6 +109,8 @@ RustBuffer uniffi_pubkycore_fn_func_publish_https(RustBuffer record_name, RustBu
 );
 RustBuffer uniffi_pubkycore_fn_func_put(RustBuffer url, RustBuffer content, RustBuffer secret_key, RustCallStatus *_Nonnull out_status
 );
+RustBuffer uniffi_pubkycore_fn_func_put_with_session(RustBuffer url, RustBuffer content, RustBuffer session_secret, RustCallStatus *_Nonnull out_status
+);
 void uniffi_pubkycore_fn_func_remove_event_listener(RustCallStatus *_Nonnull out_status
     
 );
@@ -122,6 +129,8 @@ RustBuffer uniffi_pubkycore_fn_func_sign_in(RustBuffer secret_key, RustCallStatu
 RustBuffer uniffi_pubkycore_fn_func_sign_out(RustBuffer session_secret, RustCallStatus *_Nonnull out_status
 );
 RustBuffer uniffi_pubkycore_fn_func_sign_up(RustBuffer secret_key, RustBuffer homeserver, RustBuffer signup_token, RustCallStatus *_Nonnull out_status
+);
+RustBuffer uniffi_pubkycore_fn_func_start_auth_flow(RustBuffer capabilities_str, RustCallStatus *_Nonnull out_status
 );
 RustBuffer uniffi_pubkycore_fn_func_switch_network(int8_t use_testnet, RustCallStatus *_Nonnull out_status
 );
@@ -244,6 +253,9 @@ void ffi_pubkycore_rust_future_complete_void(void* _Nonnull handle, RustCallStat
 uint16_t uniffi_pubkycore_checksum_func_auth(void
     
 );
+uint16_t uniffi_pubkycore_checksum_func_await_auth_approval(void
+    
+);
 uint16_t uniffi_pubkycore_checksum_func_create_recovery_file(void
     
 );
@@ -251,6 +263,9 @@ uint16_t uniffi_pubkycore_checksum_func_decrypt_recovery_file(void
     
 );
 uint16_t uniffi_pubkycore_checksum_func_delete_file(void
+    
+);
+uint16_t uniffi_pubkycore_checksum_func_delete_with_session(void
     
 );
 uint16_t uniffi_pubkycore_checksum_func_generate_mnemonic_phrase(void
@@ -292,6 +307,9 @@ uint16_t uniffi_pubkycore_checksum_func_publish_https(void
 uint16_t uniffi_pubkycore_checksum_func_put(void
     
 );
+uint16_t uniffi_pubkycore_checksum_func_put_with_session(void
+    
+);
 uint16_t uniffi_pubkycore_checksum_func_remove_event_listener(void
     
 );
@@ -317,6 +335,9 @@ uint16_t uniffi_pubkycore_checksum_func_sign_out(void
     
 );
 uint16_t uniffi_pubkycore_checksum_func_sign_up(void
+    
+);
+uint16_t uniffi_pubkycore_checksum_func_start_auth_flow(void
     
 );
 uint16_t uniffi_pubkycore_checksum_func_switch_network(void

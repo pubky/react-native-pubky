@@ -334,4 +334,52 @@ class Pubky: RCTEventEmitter {
             }
         }
     }
+
+    @objc(startAuthFlow:withResolver:withRejecter:)
+    func startAuthFlow(_ capabilities: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        Task {
+            do {
+                let result = react_native_pubky.startAuthFlow(capabilitiesStr: capabilities)
+                resolve(result)
+            } catch {
+                reject("startAuthFlow Error", "Failed to start auth flow", error)
+            }
+        }
+    }
+
+    @objc(awaitAuthApproval:withRejecter:)
+    func awaitAuthApproval(_ resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        Task {
+            do {
+                let result = react_native_pubky.awaitAuthApproval()
+                resolve(result)
+            } catch {
+                reject("awaitAuthApproval Error", "Failed to await auth approval", error)
+            }
+        }
+    }
+
+    @objc(putWithSession:content:sessionSecret:withResolver:withRejecter:)
+    func putWithSession(_ url: String, content: String, sessionSecret: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        Task {
+            do {
+                let result = react_native_pubky.putWithSession(url: url, content: content, sessionSecret: sessionSecret)
+                resolve(result)
+            } catch {
+                reject("putWithSession Error", "Failed to put with session", error)
+            }
+        }
+    }
+
+    @objc(deleteWithSession:sessionSecret:withResolver:withRejecter:)
+    func deleteWithSession(_ url: String, sessionSecret: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        Task {
+            do {
+                let result = react_native_pubky.deleteWithSession(url: url, sessionSecret: sessionSecret)
+                resolve(result)
+            } catch {
+                reject("deleteWithSession Error", "Failed to delete with session", error)
+            }
+        }
+    }
 }

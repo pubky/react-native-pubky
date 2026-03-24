@@ -31,6 +31,10 @@ npm install @synonymdev/react-native-pubky
 - [x] [create_recovery_file](#createRecoveryFile): Create a recovery file.
 - [x] [decrypt_recovery_file](#decryptRecoveryFile): Decrypt a recovery file.
 - [x] [getHomeserver](#getHomeserver): Get homeserver URL from a public key.
+- [x] [startAuthFlow](#startAuthFlow): Start a Ring authentication flow with requested capabilities.
+- [x] [awaitAuthApproval](#awaitAuthApproval): Await approval of a pending Ring auth flow.
+- [x] [putWithSession](#putWithSession): Upload content to a path using session-based authentication.
+- [x] [deleteWithSession](#deleteWithSession): Delete content at a path using session-based authentication.
 ## Usage
 ### <a name="auth"></a>Auth
 ```js
@@ -340,6 +344,65 @@ if (decryptRecoveryFileRes.isErr()) {
   return;
 }
 console.log(decryptRecoveryFileRes.value);
+```
+
+### <a name="startAuthFlow"></a>startAuthFlow
+Start a Ring authentication flow with requested capabilities. Returns a URL to present to the user for approval.
+```js
+import { startAuthFlow } from '@synonymdev/react-native-pubky';
+
+const startRes = await startAuthFlow('/pub/att.app/:rw');
+if (startRes.isErr()) {
+  console.log(startRes.error.message);
+  return;
+}
+console.log(startRes.value); // Auth URL to present to user
+```
+
+### <a name="awaitAuthApproval"></a>awaitAuthApproval
+Await approval of a pending Ring auth flow. Returns session info upon approval.
+```js
+import { awaitAuthApproval } from '@synonymdev/react-native-pubky';
+
+const approvalRes = await awaitAuthApproval();
+if (approvalRes.isErr()) {
+  console.log(approvalRes.error.message);
+  return;
+}
+console.log(approvalRes.value); // { pubky, capabilities, session_secret }
+```
+
+### <a name="putWithSession"></a>putWithSession
+Upload content to a path using session-based authentication (instead of a secret key).
+```js
+import { putWithSession } from '@synonymdev/react-native-pubky';
+
+const putRes = await putWithSession(
+  'pubky://z4e8s17cou9qmuwen8p1556jzhf1wktmzo6ijsfnri9c4hnrdfty/pub/app/profile.json', // URL
+  JSON.stringify({ name: 'Alice' }), // Content (string)
+  'session_secret_from_auth_flow' // Session Secret
+);
+if (putRes.isErr()) {
+  console.log(putRes.error.message);
+  return;
+}
+console.log(putRes.value);
+```
+
+### <a name="deleteWithSession"></a>deleteWithSession
+Delete content at a path using session-based authentication (instead of a secret key).
+```js
+import { deleteWithSession } from '@synonymdev/react-native-pubky';
+
+const deleteRes = await deleteWithSession(
+  'pubky://z4e8s17cou9qmuwen8p1556jzhf1wktmzo6ijsfnri9c4hnrdfty/pub/app/profile.json', // URL
+  'session_secret_from_auth_flow' // Session Secret
+);
+if (deleteRes.isErr()) {
+  console.log(deleteRes.error.message);
+  return;
+}
+console.log(deleteRes.value);
 ```
 
 ## Local Installation

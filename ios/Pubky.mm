@@ -118,6 +118,24 @@ RCT_EXTERN_METHOD(validateMnemonicPhrase:(NSString *)mnemonicPhrase
                   withResolver:(RCTPromiseResolveBlock)resolve
                   withRejecter:(RCTPromiseRejectBlock)reject)
 
+RCT_EXTERN_METHOD(startAuthFlow:(NSString *)capabilities
+                  withResolver:(RCTPromiseResolveBlock)resolve
+                  withRejecter:(RCTPromiseRejectBlock)reject)
+
+RCT_EXTERN_METHOD(awaitAuthApproval:(RCTPromiseResolveBlock)resolve
+                  withRejecter:(RCTPromiseRejectBlock)reject)
+
+RCT_EXTERN_METHOD(putWithSession:(NSString *)url
+                  content:(NSString *)content
+                  sessionSecret:(NSString *)sessionSecret
+                  withResolver:(RCTPromiseResolveBlock)resolve
+                  withRejecter:(RCTPromiseRejectBlock)reject)
+
+RCT_EXTERN_METHOD(deleteWithSession:(NSString *)url
+                  sessionSecret:(NSString *)sessionSecret
+                  withResolver:(RCTPromiseResolveBlock)resolve
+                  withRejecter:(RCTPromiseRejectBlock)reject)
+
 + (BOOL)requiresMainQueueSetup
 {
   return NO;
