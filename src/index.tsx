@@ -20,6 +20,27 @@ const Pubky = NativeModules.Pubky
 
 const eventEmitter = new NativeEventEmitter(Pubky);
 
+const nativeErrorMessage = (error: unknown): string => {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'string') return error;
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return String(error);
+  }
+};
+
+const nativeResultError = (res: unknown): string | null => {
+  if (!Array.isArray(res)) return null;
+
+  const isError = String(res[0] ?? '').toLowerCase();
+  const payload =
+    typeof res[1] === 'string' ? res[1] : nativeErrorMessage(res[1]);
+
+  if (isError === 'true') return payload;
+  return null;
+};
+
 export async function setEventListener(
   callback: (eventData: string) => void
 ): Promise<Result<void>> {
@@ -28,7 +49,7 @@ export async function setEventListener(
     eventEmitter.addListener('PubkyEvent', callback);
     return ok(undefined);
   } catch (e) {
-    return err(JSON.stringify(e));
+    return err(nativeErrorMessage(e));
   }
 }
 
@@ -38,7 +59,7 @@ export async function removeEventListener(): Promise<Result<void>> {
     eventEmitter.removeAllListeners('PubkyEvent');
     return ok(undefined);
   } catch (e) {
-    return err(JSON.stringify(e));
+    return err(nativeErrorMessage(e));
   }
 }
 
@@ -46,11 +67,16 @@ export async function auth(
   url: string,
   secretKey: string
 ): Promise<Result<string[]>> {
-  const res = await Pubky.auth(url, secretKey);
-  if (res[0] === 'error') {
-    return err(res[1]);
+  try {
+    const res = await Pubky.auth(url, secretKey);
+    const errorMessage = nativeResultError(res);
+    if (errorMessage) {
+      return err(errorMessage);
+    }
+    return ok(res[1]);
+  } catch (e) {
+    return err(nativeErrorMessage(e));
   }
-  return ok(res[1]);
 }
 
 export type Capability = {
@@ -69,13 +95,14 @@ export async function parseAuthUrl(
 ): Promise<Result<PubkyAuthDetails>> {
   try {
     const res = await Pubky.parseAuthUrl(url);
-    if (res[0] === 'error') {
-      return err(res[1]);
+    const errorMessage = nativeResultError(res);
+    if (errorMessage) {
+      return err(errorMessage);
     }
     const parsed = JSON.parse(res[1]);
     return ok(parsed);
   } catch (e) {
-    return err(JSON.stringify(e));
+    return err(nativeErrorMessage(e));
   }
 }
 
@@ -86,12 +113,13 @@ export async function publish(
 ): Promise<Result<string[]>> {
   try {
     const res = await Pubky.publish(recordName, recordContent, secretKey);
-    if (res[0] === 'error') {
-      return err(res[1]);
+    const errorMessage = nativeResultError(res);
+    if (errorMessage) {
+      return err(errorMessage);
     }
     return ok(res[1]);
   } catch (e) {
-    return err(JSON.stringify(e));
+    return err(nativeErrorMessage(e));
   }
 }
 
@@ -117,12 +145,13 @@ export interface IDNSPacket {
 export async function resolve(publicKey: string): Promise<Result<IDNSPacket>> {
   try {
     const res = await Pubky.resolve(publicKey);
-    if (res[0] === 'error') {
-      return err(res[1]);
+    const errorMessage = nativeResultError(res);
+    if (errorMessage) {
+      return err(errorMessage);
     }
     return ok(JSON.parse(res[1]));
   } catch (e) {
-    return err(JSON.stringify(e));
+    return err(nativeErrorMessage(e));
   }
 }
 
@@ -135,12 +164,13 @@ export async function getSignupToken(
 ): Promise<Result<string>> {
   try {
     const res = await Pubky.getSignupToken(homeserverPubky, adminPassword);
-    if (res[0] === 'error') {
-      return err(res[1]);
+    const errorMessage = nativeResultError(res);
+    if (errorMessage) {
+      return err(errorMessage);
     }
     return ok(res[1]);
   } catch (e) {
-    return err(JSON.stringify(e));
+    return err(nativeErrorMessage(e));
   }
 }
 
@@ -151,12 +181,13 @@ export async function signUp(
 ): Promise<Result<SessionInfo>> {
   try {
     const res = await Pubky.signUp(secretKey, homeserver, signupToken);
-    if (res[0] === 'error') {
-      return err(res[1]);
+    const errorMessage = nativeResultError(res);
+    if (errorMessage) {
+      return err(errorMessage);
     }
     return ok(JSON.parse(res[1]));
   } catch (e) {
-    return err(JSON.stringify(e));
+    return err(nativeErrorMessage(e));
   }
 }
 
@@ -166,36 +197,39 @@ export async function republishHomeserver(
 ): Promise<Result<string>> {
   try {
     const res = await Pubky.republishHomeserver(secretKey, homeserver);
-    if (res[0] === 'error') {
-      return err(res[1]);
+    const errorMessage = nativeResultError(res);
+    if (errorMessage) {
+      return err(errorMessage);
     }
     return ok(res[1]);
   } catch (e) {
-    return err(JSON.stringify(e));
+    return err(nativeErrorMessage(e));
   }
 }
 
 export async function signIn(secretKey: string): Promise<Result<SessionInfo>> {
   try {
     const res = await Pubky.signIn(secretKey);
-    if (res[0] === 'error') {
-      return err(res[1]);
+    const errorMessage = nativeResultError(res);
+    if (errorMessage) {
+      return err(errorMessage);
     }
     return ok(JSON.parse(res[1]));
   } catch (e) {
-    return err(JSON.stringify(e));
+    return err(nativeErrorMessage(e));
   }
 }
 
 export async function signOut(sessionSecret: string): Promise<Result<string>> {
   try {
     const res = await Pubky.signOut(sessionSecret);
-    if (res[0] === 'error') {
-      return err(res[1]);
+    const errorMessage = nativeResultError(res);
+    if (errorMessage) {
+      return err(errorMessage);
     }
     return ok(res[1]);
   } catch (e) {
-    return err(JSON.stringify(e));
+    return err(nativeErrorMessage(e));
   }
 }
 
@@ -204,20 +238,22 @@ export async function revalidateSession(
 ): Promise<Result<SessionInfo>> {
   try {
     const res = await Pubky.revalidateSession(sessionSecret);
-    if (res[0] === 'error') {
-      return err(res[1]);
+    const errorMessage = nativeResultError(res);
+    if (errorMessage) {
+      return err(errorMessage);
     }
     return ok(JSON.parse(res[1]));
   } catch (e) {
-    return err(JSON.stringify(e));
+    return err(nativeErrorMessage(e));
   }
 }
 
 export async function get(url: string): Promise<Result<string>> {
   try {
     const res = await Pubky.get(url);
-    if (res[0] === 'error') {
-      return err(res[1]);
+    const errorMessage = nativeResultError(res);
+    if (errorMessage) {
+      return err(errorMessage);
     }
     // Return the raw response directly
     // It will be either:
@@ -225,7 +261,7 @@ export async function get(url: string): Promise<Result<string>> {
     // - "base64:..." (for binary content)
     return ok(res[1]);
   } catch (e) {
-    return err(JSON.stringify(e));
+    return err(nativeErrorMessage(e));
   }
 }
 
@@ -236,12 +272,13 @@ export async function put(
 ): Promise<Result<string[]>> {
   try {
     const res = await Pubky.put(url, JSON.stringify(content), secretKey);
-    if (res[0] === 'error') {
-      return err(res[1]);
+    const errorMessage = nativeResultError(res);
+    if (errorMessage) {
+      return err(errorMessage);
     }
     return ok(res[1]);
   } catch (e) {
-    return err(JSON.stringify(e));
+    return err(nativeErrorMessage(e));
   }
 }
 
@@ -252,12 +289,13 @@ export async function publishHttps(
 ): Promise<Result<string[]>> {
   try {
     const res = await Pubky.publishHttps(recordName, target, secretKey);
-    if (res[0] === 'error') {
-      return err(res[1]);
+    const errorMessage = nativeResultError(res);
+    if (errorMessage) {
+      return err(errorMessage);
     }
     return ok(res[1]);
   } catch (e) {
-    return err(JSON.stringify(e));
+    return err(nativeErrorMessage(e));
   }
 }
 
@@ -281,24 +319,26 @@ export async function resolveHttps(
 ): Promise<Result<IHttpsResolveResult>> {
   try {
     const res = await Pubky.resolveHttps(publicKey);
-    if (res[0] === 'error') {
-      return err(res[1]);
+    const errorMessage = nativeResultError(res);
+    if (errorMessage) {
+      return err(errorMessage);
     }
     return ok(JSON.parse(res[1]));
   } catch (e) {
-    return err(JSON.stringify(e));
+    return err(nativeErrorMessage(e));
   }
 }
 
 export async function list(url: string): Promise<Result<string[]>> {
   try {
     const res = await Pubky.list(url);
-    if (res[0] === 'error') {
-      return err(res[1]);
+    const errorMessage = nativeResultError(res);
+    if (errorMessage) {
+      return err(errorMessage);
     }
     return ok(JSON.parse(res[1]));
   } catch (e) {
-    return err(JSON.stringify(e));
+    return err(nativeErrorMessage(e));
   }
 }
 
@@ -308,12 +348,13 @@ export async function deleteFile(
 ): Promise<Result<string[]>> {
   try {
     const res = await Pubky.deleteFile(url, secretKey);
-    if (res[0] === 'error') {
-      return err(res[1]);
+    const errorMessage = nativeResultError(res);
+    if (errorMessage) {
+      return err(errorMessage);
     }
     return ok(res[1]);
   } catch (e) {
-    return err(JSON.stringify(e));
+    return err(nativeErrorMessage(e));
   }
 }
 
@@ -333,12 +374,13 @@ export interface IGenerateSecretKey extends IPublicKeyInfo {
 export async function generateSecretKey(): Promise<Result<IGenerateSecretKey>> {
   try {
     const res = await Pubky.generateSecretKey();
-    if (res[0] === 'error') {
-      return err(res[1]);
+    const errorMessage = nativeResultError(res);
+    if (errorMessage) {
+      return err(errorMessage);
     }
     return ok(JSON.parse(res[1]));
   } catch (e) {
-    return err(JSON.stringify(e));
+    return err(nativeErrorMessage(e));
   }
 }
 
@@ -347,12 +389,13 @@ export async function getPublicKeyFromSecretKey(
 ): Promise<Result<IPublicKeyInfo>> {
   try {
     const res = await Pubky.getPublicKeyFromSecretKey(secretKey);
-    if (res[0] === 'error') {
-      return err(res[1]);
+    const errorMessage = nativeResultError(res);
+    if (errorMessage) {
+      return err(errorMessage);
     }
     return ok(JSON.parse(res[1]));
   } catch (e) {
-    return err(JSON.stringify(e));
+    return err(nativeErrorMessage(e));
   }
 }
 
@@ -362,12 +405,13 @@ export async function createRecoveryFile(
 ): Promise<Result<string>> {
   try {
     const res = await Pubky.createRecoveryFile(secretKey, passphrase);
-    if (res[0] === 'error') {
-      return err(res[1]);
+    const errorMessage = nativeResultError(res);
+    if (errorMessage) {
+      return err(errorMessage);
     }
     return ok(res[1]);
   } catch (e) {
-    return err(JSON.stringify(e));
+    return err(nativeErrorMessage(e));
   }
 }
 
@@ -377,36 +421,39 @@ export async function decryptRecoveryFile(
 ): Promise<Result<string>> {
   try {
     const res = await Pubky.decryptRecoveryFile(recoveryFile, passphrase);
-    if (res[0] === 'error') {
-      return err(res[1]);
+    const errorMessage = nativeResultError(res);
+    if (errorMessage) {
+      return err(errorMessage);
     }
     return ok(res[1]);
   } catch (e) {
-    return err(JSON.stringify(e));
+    return err(nativeErrorMessage(e));
   }
 }
 
 export async function getHomeserver(pubky: string): Promise<Result<string>> {
   try {
     const res = await Pubky.getHomeserver(pubky);
-    if (res[0] === 'error') {
-      return err(res[1]);
+    const errorMessage = nativeResultError(res);
+    if (errorMessage) {
+      return err(errorMessage);
     }
     return ok(res[1]);
   } catch (e) {
-    return err(JSON.stringify(e));
+    return err(nativeErrorMessage(e));
   }
 }
 
 export async function generateMnemonicPhrase(): Promise<Result<string>> {
   try {
     const res = await Pubky.generateMnemonicPhrase();
-    if (res[0] === 'error') {
-      return err(res[1]);
+    const errorMessage = nativeResultError(res);
+    if (errorMessage) {
+      return err(errorMessage);
     }
     return ok(res[1]);
   } catch (e) {
-    return err(JSON.stringify(e));
+    return err(nativeErrorMessage(e));
   }
 }
 
@@ -419,12 +466,13 @@ export async function mnemonicPhraseToKeypair(
 ): Promise<Result<IGenerateSecretKey>> {
   try {
     const res = await Pubky.mnemonicPhraseToKeypair(mnemonicPhrase);
-    if (res[0] === 'error') {
-      return err(res[1]);
+    const errorMessage = nativeResultError(res);
+    if (errorMessage) {
+      return err(errorMessage);
     }
     return ok(JSON.parse(res[1]));
   } catch (e) {
-    return err(JSON.stringify(e));
+    return err(nativeErrorMessage(e));
   }
 }
 
@@ -433,12 +481,13 @@ export async function generateMnemonicPhraseAndKeypair(): Promise<
 > {
   try {
     const res = await Pubky.generateMnemonicPhraseAndKeypair();
-    if (res[0] === 'error') {
-      return err(res[1]);
+    const errorMessage = nativeResultError(res);
+    if (errorMessage) {
+      return err(errorMessage);
     }
     return ok(JSON.parse(res[1]));
   } catch (e) {
-    return err(JSON.stringify(e));
+    return err(nativeErrorMessage(e));
   }
 }
 
@@ -447,12 +496,13 @@ export async function validateMnemonicPhrase(
 ): Promise<Result<boolean>> {
   try {
     const res = await Pubky.validateMnemonicPhrase(mnemonicPhrase);
-    if (res[0] === 'error') {
-      return err(res[1]);
+    const errorMessage = nativeResultError(res);
+    if (errorMessage) {
+      return err(errorMessage);
     }
     return ok(res[1] === 'true');
   } catch (e) {
-    return err(JSON.stringify(e));
+    return err(nativeErrorMessage(e));
   }
 }
 
@@ -461,24 +511,26 @@ export async function startAuthFlow(
 ): Promise<Result<string>> {
   try {
     const res = await Pubky.startAuthFlow(capabilities);
-    if (res[0] === 'error') {
-      return err(res[1]);
+    const errorMessage = nativeResultError(res);
+    if (errorMessage) {
+      return err(errorMessage);
     }
     return ok(res[1]);
   } catch (e) {
-    return err(JSON.stringify(e));
+    return err(nativeErrorMessage(e));
   }
 }
 
 export async function awaitAuthApproval(): Promise<Result<SessionInfo>> {
   try {
     const res = await Pubky.awaitAuthApproval();
-    if (res[0] === 'error') {
-      return err(res[1]);
+    const errorMessage = nativeResultError(res);
+    if (errorMessage) {
+      return err(errorMessage);
     }
     return ok(JSON.parse(res[1]));
   } catch (e) {
-    return err(JSON.stringify(e));
+    return err(nativeErrorMessage(e));
   }
 }
 
@@ -489,12 +541,13 @@ export async function putWithSession(
 ): Promise<Result<string>> {
   try {
     const res = await Pubky.putWithSession(url, content, sessionSecret);
-    if (res[0] === 'error') {
-      return err(res[1]);
+    const errorMessage = nativeResultError(res);
+    if (errorMessage) {
+      return err(errorMessage);
     }
     return ok(res[1]);
   } catch (e) {
-    return err(JSON.stringify(e));
+    return err(nativeErrorMessage(e));
   }
 }
 
@@ -504,11 +557,12 @@ export async function deleteWithSession(
 ): Promise<Result<string>> {
   try {
     const res = await Pubky.deleteWithSession(url, sessionSecret);
-    if (res[0] === 'error') {
-      return err(res[1]);
+    const errorMessage = nativeResultError(res);
+    if (errorMessage) {
+      return err(errorMessage);
     }
     return ok(res[1]);
   } catch (e) {
-    return err(JSON.stringify(e));
+    return err(nativeErrorMessage(e));
   }
 }
