@@ -88,6 +88,16 @@ export type PubkyAuthDetails = {
   relay: string;
   capabilities: Capability[];
   secret: string;
+  /**
+   * Auth intent parsed from the deep link host ("signin" | "signup").
+   * Legacy `pubkyauth:///?...` URLs parse as "signin". Absent only when
+   * running against a pre-0.9.1 native binary.
+   */
+  kind?: 'signin' | 'signup';
+  /** Homeserver public key (bare z-base32) from the `hs` param of signup links. */
+  homeserver?: string;
+  /** Signup token from the `st` param of signup links. */
+  signup_token?: string;
 };
 
 export async function parseAuthUrl(
