@@ -100,7 +100,7 @@ class Pubky: RCTEventEmitter {
     }
 
     @objc(signUp:homeserver:signupToken:withResolver:withRejecter:)
-    func signUp(_ secretKey: String, homeserver: String, signupToken: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+    func signUp(_ secretKey: String, homeserver: String, signupToken: String?, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
         Task {
             do {
                 let result = try await react_native_pubky.signUp(secretKey: secretKey, homeserver: homeserver, signupToken: signupToken)

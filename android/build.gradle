@@ -100,5 +100,9 @@ dependencies {
   // Uniffi
   implementation("net.java.dev.jna:jna:5.18.1@aar")
   implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+  // rustls-platform-verifier's JVM support component (org.rustls.platformverifier.*).
+  // pubky 0.9.1's TLS stack calls into this class on Android; without it on the classpath
+  // certificate verification fails. Vendored from the rustls-platform-verifier-android crate.
+  implementation(files("libs/rustls-platform-verifier.jar"))
 }
 
