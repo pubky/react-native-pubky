@@ -15,6 +15,12 @@ import uniffi.pubkycore.*
 class PubkyModule(reactContext: ReactApplicationContext) :
     ReactContextBaseJavaModule(reactContext) {
 
+    init {
+        // Initialize rustls-platform-verifier with the app Context before any TLS call.
+        // Required on Android: pkarr's relay TLS uses it (see uniffi.pubkycore.RustlsInit).
+        RustlsInit.ensure(reactContext)
+    }
+
     override fun getName(): String {
         return NAME
     }
@@ -168,7 +174,7 @@ class PubkyModule(reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
-    fun signUp(secretKey: String, homeserver: String, signupToken: String, promise: Promise) {
+    fun signUp(secretKey: String, homeserver: String, signupToken: String?, promise: Promise) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val result = signUp(secretKey, homeserver, signupToken)

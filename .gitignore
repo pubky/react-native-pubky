@@ -80,3 +80,6 @@ lib/
 # React Native Codegen
 ios/generated
 android/generated
+
+# Local pubky-core-ffi build clone used to regenerate native bindings (not part of this package)
+rust/
