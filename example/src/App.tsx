@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import {
   auth,
   parseAuthUrl,
+  parseDeepLink,
   publish,
   resolve,
   signUp,
@@ -34,6 +35,7 @@ const HOMESERVER = '8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo';
 const SECRET_KEY =
   'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
 const PUBLIC_KEY = 'z4e8s17cou9qmuwen8p1556jzhf1wktmzo6ijsfnri9c4hnrdfty';
+const CLIENT_ID = 'react-native-pubky.example';
 
 export default function App() {
   useEffect(() => {
@@ -105,6 +107,29 @@ export default function App() {
         }}
       />
       <Button
+        title={'parseDeepLink'}
+        onPress={async (): Promise<void> => {
+          try {
+            const deepLinks = [
+              'pubkyauth://signin_grant?caps=/pub/pubky.app/:rw&secret=U55XnoH6vsMCpx1pxHtt8fReVg4Brvu9C0gUBuw-Jkw&relay=https://httprelay.pubky.app/inbox&cid=react-native-pubky.example&cpk=ufibwbmed6jeq9k4p583go95wofakh9fwpp4k734trq79pd9u1uy',
+              'pubkyauth://direct_signup?hs=ufibwbmed6jeq9k4p583go95wofakh9fwpp4k734trq79pd9u1uy&st=ABCD-1234',
+              'pubkyring://secret_export?secret=U55XnoH6vsMCpx1pxHtt8fReVg4Brvu9C0gUBuw-Jkw',
+            ];
+
+            for (const deepLink of deepLinks) {
+              const res = await parseDeepLink(deepLink);
+              if (res.isErr()) {
+                console.log(deepLink, res.error.message);
+                continue;
+              }
+              console.log(deepLink, res.value);
+            }
+          } catch (e) {
+            console.log(e);
+          }
+        }}
+      />
+      <Button
         title={'publish'}
         onPress={async (): Promise<void> => {
           try {
@@ -169,7 +194,8 @@ export default function App() {
             const res = await signUp(
               SECRET_KEY, // Secret Key
               `pubky://${HOMESERVER}`, // Homeserver
-              signupToken
+              signupToken,
+              CLIENT_ID
             );
             if (res.isErr()) {
               console.log(res.error.message);
@@ -186,7 +212,8 @@ export default function App() {
         onPress={async (): Promise<void> => {
           try {
             const res = await signIn(
-              SECRET_KEY // Secret Key
+              SECRET_KEY, // Secret Key
+              CLIENT_ID
             );
             if (res.isErr()) {
               console.log(res.error.message);
@@ -219,16 +246,16 @@ export default function App() {
         title={'signout'}
         onPress={async (): Promise<void> => {
           try {
-            // First sign in to get a session secret
-            const signInRes = await signIn(SECRET_KEY);
+            // First sign in to get a grant secret
+            const signInRes = await signIn(SECRET_KEY, CLIENT_ID);
             if (signInRes.isErr()) {
               console.log('Sign in failed:', signInRes.error.message);
               return;
             }
             console.log('Signed in, session:', signInRes.value);
 
-            // Now sign out using the session secret
-            const res = await signOut(signInRes.value.session_secret);
+            // Now sign out using the grant secret
+            const res = await signOut(signInRes.value.grant_secret);
             if (res.isErr()) {
               console.log(res.error.message);
               return;
@@ -246,7 +273,8 @@ export default function App() {
             const res = await put(
               `pubky://${PUBLIC_KEY}/pub/synonym.to`,
               { data: 'test data' },
-              SECRET_KEY
+              SECRET_KEY,
+              CLIENT_ID
             );
             if (res.isErr()) {
               console.log(res.error.message);
@@ -346,7 +374,8 @@ export default function App() {
             }
             const res = await deleteFile(
               listRes.value[0], // URL
-              SECRET_KEY
+              SECRET_KEY,
+              CLIENT_ID
             );
             if (res.isErr()) {
               console.log(res.error.message);
@@ -362,8 +391,8 @@ export default function App() {
         title={'revalidateSession'}
         onPress={async (): Promise<void> => {
           try {
-            // First sign in to get a session secret
-            const signInRes = await signIn(SECRET_KEY);
+            // First sign in to get a grant secret
+            const signInRes = await signIn(SECRET_KEY, CLIENT_ID);
             if (signInRes.isErr()) {
               console.log('Sign in failed:', signInRes.error.message);
               return;
@@ -371,7 +400,7 @@ export default function App() {
             console.log('Signed in, session:', signInRes.value);
 
             // Now revalidate the session
-            const res = await revalidateSession(signInRes.value.session_secret);
+            const res = await revalidateSession(signInRes.value.grant_secret);
             if (res.isErr()) {
               console.log('Revalidation failed:', res.error.message);
               return;

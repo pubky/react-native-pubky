@@ -63,6 +63,16 @@ class Pubky: RCTEventEmitter {
         }
     }
 
+    @objc(parseDeepLink:withResolver:withRejecter:)
+    func parseDeepLink(_ url: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        do {
+            let result = react_native_pubky.parseDeepLink(url: url)
+            resolve(result)
+        } catch {
+            reject("parseDeepLink Error", "Failed to parse deep link", error)
+        }
+    }
+
     @objc(publish:recordContent:secretKey:withResolver:withRejecter:)
     func publish(recordName: String, recordContent: String, secretKey: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
         Task {
@@ -99,14 +109,38 @@ class Pubky: RCTEventEmitter {
         }
     }
 
-    @objc(signUp:homeserver:signupToken:withResolver:withRejecter:)
-    func signUp(_ secretKey: String, homeserver: String, signupToken: String?, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+    @objc(signUp:homeserver:signupToken:clientId:withResolver:withRejecter:)
+    func signUp(_ secretKey: String, homeserver: String, signupToken: String?, clientId: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
         Task {
             do {
-                let result = try await react_native_pubky.signUp(secretKey: secretKey, homeserver: homeserver, signupToken: signupToken)
+                let result = try await react_native_pubky.signUp(secretKey: secretKey, homeserver: homeserver, signupToken: signupToken, clientId: clientId)
                 resolve(result)
             } catch {
                 reject("signUp Error", "Failed to sign up", error)
+            }
+        }
+    }
+
+    @objc(signUpGrant:homeserver:signupToken:clientId:withResolver:withRejecter:)
+    func signUpGrant(_ secretKey: String, homeserver: String, signupToken: String?, clientId: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        Task {
+            do {
+                let result = try await react_native_pubky.signUpGrant(secretKey: secretKey, homeserver: homeserver, signupToken: signupToken, clientId: clientId)
+                resolve(result)
+            } catch {
+                reject("signUpGrant Error", "Failed to sign up with grant auth", error)
+            }
+        }
+    }
+
+    @objc(signUpCookie:homeserver:signupToken:withResolver:withRejecter:)
+    func signUpCookie(_ secretKey: String, homeserver: String, signupToken: String?, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        Task {
+            do {
+                let result = try await react_native_pubky.signUpCookie(secretKey: secretKey, homeserver: homeserver, signupToken: signupToken)
+                resolve(result)
+            } catch {
+                reject("signUpCookie Error", "Failed to sign up with cookie auth", error)
             }
         }
     }
@@ -123,14 +157,38 @@ class Pubky: RCTEventEmitter {
         }
     }
 
-    @objc(signIn:withResolver:withRejecter:)
-    func signIn(_ secretKey: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+    @objc(signIn:clientId:withResolver:withRejecter:)
+    func signIn(_ secretKey: String, clientId: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
         Task {
             do {
-                let result = try await react_native_pubky.signIn(secretKey: secretKey)
+                let result = try await react_native_pubky.signIn(secretKey: secretKey, clientId: clientId)
                 resolve(result)
             } catch {
                 reject("signIn Error", "Failed to sign in", error)
+            }
+        }
+    }
+
+    @objc(signInGrant:clientId:withResolver:withRejecter:)
+    func signInGrant(_ secretKey: String, clientId: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        Task {
+            do {
+                let result = try await react_native_pubky.signInGrant(secretKey: secretKey, clientId: clientId)
+                resolve(result)
+            } catch {
+                reject("signInGrant Error", "Failed to sign in with grant auth", error)
+            }
+        }
+    }
+
+    @objc(signInCookie:withResolver:withRejecter:)
+    func signInCookie(_ secretKey: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        Task {
+            do {
+                let result = try await react_native_pubky.signInCookie(secretKey: secretKey)
+                resolve(result)
+            } catch {
+                reject("signInCookie Error", "Failed to sign in with cookie auth", error)
             }
         }
     }
@@ -159,11 +217,11 @@ class Pubky: RCTEventEmitter {
         }
     }
 
-    @objc(put:content:secretKey:withResolver:withRejecter:)
-    func put(_ url: String, content: String, secretKey: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+    @objc(put:content:secretKey:clientId:withResolver:withRejecter:)
+    func put(_ url: String, content: String, secretKey: String, clientId: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
         Task {
             do {
-                let result = try await react_native_pubky.put(url: url, content: content, secretKey: secretKey)
+                let result = try await react_native_pubky.put(url: url, content: content, secretKey: secretKey, clientId: clientId)
                 resolve(result)
             } catch {
                 reject("put Error", "Failed to put", error)
@@ -219,11 +277,11 @@ class Pubky: RCTEventEmitter {
         }
     }
 
-    @objc(deleteFile:secretKey:withResolver:withRejecter:)
-    func deleteFile(_ url: String, secretKey: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+    @objc(deleteFile:secretKey:clientId:withResolver:withRejecter:)
+    func deleteFile(_ url: String, secretKey: String, clientId: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
         Task {
             do {
-                let result = try await react_native_pubky.deleteFile(url: url, secretKey: secretKey)
+                let result = try await react_native_pubky.deleteFile(url: url, secretKey: secretKey, clientId: clientId)
                 resolve(result)
             } catch {
                 reject("list Error", "Failed to deleteFile", error)
@@ -335,14 +393,38 @@ class Pubky: RCTEventEmitter {
         }
     }
 
-    @objc(startAuthFlow:withResolver:withRejecter:)
-    func startAuthFlow(_ capabilities: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+    @objc(startAuthFlow:clientId:withResolver:withRejecter:)
+    func startAuthFlow(_ capabilities: String, clientId: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
         Task {
             do {
-                let result = react_native_pubky.startAuthFlow(capabilitiesStr: capabilities)
+                let result = react_native_pubky.startAuthFlow(capabilitiesStr: capabilities, clientId: clientId)
                 resolve(result)
             } catch {
                 reject("startAuthFlow Error", "Failed to start auth flow", error)
+            }
+        }
+    }
+
+    @objc(startGrantAuthFlow:clientId:withResolver:withRejecter:)
+    func startGrantAuthFlow(_ capabilities: String, clientId: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        Task {
+            do {
+                let result = react_native_pubky.startGrantAuthFlow(capabilitiesStr: capabilities, clientId: clientId)
+                resolve(result)
+            } catch {
+                reject("startGrantAuthFlow Error", "Failed to start grant auth flow", error)
+            }
+        }
+    }
+
+    @objc(startCookieAuthFlow:withResolver:withRejecter:)
+    func startCookieAuthFlow(_ capabilities: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        Task {
+            do {
+                let result = react_native_pubky.startCookieAuthFlow(capabilitiesStr: capabilities)
+                resolve(result)
+            } catch {
+                reject("startCookieAuthFlow Error", "Failed to start cookie auth flow", error)
             }
         }
     }
@@ -355,6 +437,30 @@ class Pubky: RCTEventEmitter {
                 resolve(result)
             } catch {
                 reject("awaitAuthApproval Error", "Failed to await auth approval", error)
+            }
+        }
+    }
+
+    @objc(awaitGrantAuthApproval:withRejecter:)
+    func awaitGrantAuthApproval(_ resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        Task {
+            do {
+                let result = react_native_pubky.awaitGrantAuthApproval()
+                resolve(result)
+            } catch {
+                reject("awaitGrantAuthApproval Error", "Failed to await grant auth approval", error)
+            }
+        }
+    }
+
+    @objc(awaitCookieAuthApproval:withRejecter:)
+    func awaitCookieAuthApproval(_ resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        Task {
+            do {
+                let result = react_native_pubky.awaitCookieAuthApproval()
+                resolve(result)
+            } catch {
+                reject("awaitCookieAuthApproval Error", "Failed to await cookie auth approval", error)
             }
         }
     }

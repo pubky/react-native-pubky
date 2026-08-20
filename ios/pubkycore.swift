@@ -10,7 +10,7 @@ import Foundation
 #endif
 
 private extension RustBuffer {
-    // Allocate a new buffer, copying the contents of a `UInt8` array.
+    /// Allocate a new buffer, copying the contents of a `UInt8` array.
     init(bytes: [UInt8]) {
         let rbuf = bytes.withUnsafeBufferPointer { ptr in
             RustBuffer.from(ptr)
@@ -22,8 +22,8 @@ private extension RustBuffer {
         try! rustCall { ffi_pubkycore_rustbuffer_from_bytes(ForeignBytes(bufferPointer: ptr), $0) }
     }
 
-    // Frees the buffer in place.
-    // The buffer must not be used after this is called.
+    /// Frees the buffer in place.
+    /// The buffer must not be used after this is called.
     func deallocate() {
         try! rustCall { ffi_pubkycore_rustbuffer_free(self, $0) }
     }
@@ -68,9 +68,9 @@ private func createReader(data: Data) -> (data: Data, offset: Data.Index) {
     (data: data, offset: 0)
 }
 
-// Reads an integer at the current offset, in big-endian order, and advances
-// the offset on success. Throws if reading the integer would move the
-// offset past the end of the buffer.
+/// Reads an integer at the current offset, in big-endian order, and advances
+/// the offset on success. Throws if reading the integer would move the
+/// offset past the end of the buffer.
 private func readInt<T: FixedWidthInteger>(_ reader: inout (data: Data, offset: Data.Index)) throws -> T {
     let range = reader.offset ..< reader.offset + MemoryLayout<T>.size
     guard reader.data.count >= range.upperBound else {
@@ -87,8 +87,8 @@ private func readInt<T: FixedWidthInteger>(_ reader: inout (data: Data, offset: 
     return value.bigEndian
 }
 
-// Reads an arbitrary number of bytes, to be used to read
-// raw bytes, this is useful when lifting strings
+/// Reads an arbitrary number of bytes, to be used to read
+/// raw bytes, this is useful when lifting strings
 private func readBytes(_ reader: inout (data: Data, offset: Data.Index), count: Int) throws -> [UInt8] {
     let range = reader.offset ..< (reader.offset + count)
     guard reader.data.count >= range.upperBound else {
@@ -102,17 +102,17 @@ private func readBytes(_ reader: inout (data: Data, offset: Data.Index), count: 
     return value
 }
 
-// Reads a float at the current offset.
+/// Reads a float at the current offset.
 private func readFloat(_ reader: inout (data: Data, offset: Data.Index)) throws -> Float {
     return try Float(bitPattern: readInt(&reader))
 }
 
-// Reads a float at the current offset.
+/// Reads a float at the current offset.
 private func readDouble(_ reader: inout (data: Data, offset: Data.Index)) throws -> Double {
     return try Double(bitPattern: readInt(&reader))
 }
 
-// Indicates if the offset has reached the end of the buffer.
+/// Indicates if the offset has reached the end of the buffer.
 private func hasRemaining(_ reader: (data: Data, offset: Data.Index)) -> Bool {
     return reader.offset < reader.data.count
 }
@@ -125,14 +125,14 @@ private func createWriter() -> [UInt8] {
     return []
 }
 
-private func writeBytes<S>(_ writer: inout [UInt8], _ byteArr: S) where S: Sequence, S.Element == UInt8 {
+private func writeBytes<S: Sequence>(_ writer: inout [UInt8], _ byteArr: S) where S.Element == UInt8 {
     writer.append(contentsOf: byteArr)
 }
 
-// Writes an integer in big-endian order.
-//
-// Warning: make sure what you are trying to write
-// is in the correct type!
+/// Writes an integer in big-endian order.
+///
+/// Warning: make sure what you are trying to write
+/// is in the correct type!
 private func writeInt<T: FixedWidthInteger>(_ writer: inout [UInt8], _ value: T) {
     var value = value.bigEndian
     withUnsafeBytes(of: &value) { writer.append(contentsOf: $0) }
@@ -146,8 +146,8 @@ private func writeDouble(_ writer: inout [UInt8], _ value: Double) {
     writeInt(&writer, value.bitPattern)
 }
 
-// Protocol for types that transfer other types across the FFI. This is
-// analogous go the Rust trait of the same name.
+/// Protocol for types that transfer other types across the FFI. This is
+/// analogous go the Rust trait of the same name.
 private protocol FfiConverter {
     associatedtype FfiType
     associatedtype SwiftType
@@ -158,7 +158,7 @@ private protocol FfiConverter {
     static func write(_ value: SwiftType, into buf: inout [UInt8])
 }
 
-// Types conforming to `Primitive` pass themselves directly over the FFI.
+/// Types conforming to `Primitive` pass themselves directly over the FFI.
 private protocol FfiConverterPrimitive: FfiConverter where FfiType == SwiftType {}
 
 extension FfiConverterPrimitive {
@@ -171,8 +171,8 @@ extension FfiConverterPrimitive {
     }
 }
 
-// Types conforming to `FfiConverterRustBuffer` lift and lower into a `RustBuffer`.
-// Used for complex types where it's hard to write a custom lift/lower.
+/// Types conforming to `FfiConverterRustBuffer` lift and lower into a `RustBuffer`.
+/// Used for complex types where it's hard to write a custom lift/lower.
 private protocol FfiConverterRustBuffer: FfiConverter where FfiType == RustBuffer {}
 
 extension FfiConverterRustBuffer {
@@ -193,8 +193,8 @@ extension FfiConverterRustBuffer {
     }
 }
 
-// An error type for FFI errors. These errors occur at the UniFFI level, not
-// the library level.
+/// An error type for FFI errors. These errors occur at the UniFFI level, not
+/// the library level.
 private enum UniffiInternalError: LocalizedError {
     case bufferOverflow
     case incompleteData
@@ -469,8 +469,8 @@ private class UniFFICallbackHandleMap<T> {
     }
 }
 
-// Magic number for the Rust proxy to call using the same mechanism as every other method,
-// to free the callback once it's dropped by Rust.
+/// Magic number for the Rust proxy to call using the same mechanism as every other method,
+/// to free the callback once it's dropped by Rust.
 private let IDX_CALLBACK_FREE: Int32 = 0
 // Callback return codes
 private let UNIFFI_CALLBACK_SUCCESS: Int32 = 0
@@ -483,7 +483,7 @@ public protocol EventListener: AnyObject {
     func onEventOccurred(eventData: String)
 }
 
-// The ForeignCallback that is passed to Rust.
+/// The ForeignCallback that is passed to Rust.
 private let foreignCallbackCallbackInterfaceEventListener: ForeignCallback = { (handle: UniFFICallbackHandle, method: Int32, argsData: UnsafePointer<UInt8>, argsLen: Int32, out_buf: UnsafeMutablePointer<RustBuffer>) -> Int32 in
     func invokeOnEventOccurred(_ swiftCallbackInterface: EventListener, _ argsData: UnsafePointer<UInt8>, _ argsLen: Int32, _: UnsafeMutablePointer<RustBuffer>) throws -> Int32 {
         var reader = createReader(data: Data(bytes: argsData, count: Int(argsLen)))
@@ -528,7 +528,7 @@ private let foreignCallbackCallbackInterfaceEventListener: ForeignCallback = { (
     }
 }
 
-// FfiConverter protocol for callback interfaces
+/// FfiConverter protocol for callback interfaces
 private enum FfiConverterCallbackInterfaceEventListener {
     private static let initCallbackOnce: () = {
         // Swift ensures this initializer code will once run once, even when accessed by multiple threads.
@@ -550,7 +550,7 @@ private enum FfiConverterCallbackInterfaceEventListener {
 
 extension FfiConverterCallbackInterfaceEventListener: FfiConverter {
     typealias SwiftType = EventListener
-    // We can use Handle as the FfiType because it's a typealias to UInt64
+    /// We can use Handle as the FfiType because it's a typealias to UInt64
     typealias FfiType = UniFFICallbackHandle
 
     public static func lift(_ handle: UniFFICallbackHandle) throws -> SwiftType {
@@ -640,6 +640,22 @@ public func awaitAuthApproval() -> [String] {
     )
 }
 
+public func awaitCookieAuthApproval() -> [String] {
+    return try! FfiConverterSequenceString.lift(
+        try! rustCall {
+            uniffi_pubkycore_fn_func_await_cookie_auth_approval($0)
+        }
+    )
+}
+
+public func awaitGrantAuthApproval() -> [String] {
+    return try! FfiConverterSequenceString.lift(
+        try! rustCall {
+            uniffi_pubkycore_fn_func_await_grant_auth_approval($0)
+        }
+    )
+}
+
 public func createRecoveryFile(secretKey: String, passphrase: String) -> [String] {
     return try! FfiConverterSequenceString.lift(
         try! rustCall {
@@ -662,12 +678,13 @@ public func decryptRecoveryFile(recoveryFile: String, passphrase: String) -> [St
     )
 }
 
-public func deleteFile(url: String, secretKey: String) -> [String] {
+public func deleteFile(url: String, secretKey: String, clientId: String) -> [String] {
     return try! FfiConverterSequenceString.lift(
         try! rustCall {
             uniffi_pubkycore_fn_func_delete_file(
                 FfiConverterString.lower(url),
-                FfiConverterString.lower(secretKey), $0
+                FfiConverterString.lower(secretKey),
+                FfiConverterString.lower(clientId), $0
             )
         }
     )
@@ -779,6 +796,16 @@ public func parseAuthUrl(url: String) -> [String] {
     )
 }
 
+public func parseDeepLink(url: String) -> [String] {
+    return try! FfiConverterSequenceString.lift(
+        try! rustCall {
+            uniffi_pubkycore_fn_func_parse_deep_link(
+                FfiConverterString.lower(url), $0
+            )
+        }
+    )
+}
+
 public func publish(recordName: String, recordContent: String, secretKey: String) -> [String] {
     return try! FfiConverterSequenceString.lift(
         try! rustCall {
@@ -803,13 +830,14 @@ public func publishHttps(recordName: String, target: String, secretKey: String) 
     )
 }
 
-public func put(url: String, content: String, secretKey: String) -> [String] {
+public func put(url: String, content: String, secretKey: String, clientId: String) -> [String] {
     return try! FfiConverterSequenceString.lift(
         try! rustCall {
             uniffi_pubkycore_fn_func_put(
                 FfiConverterString.lower(url),
                 FfiConverterString.lower(content),
-                FfiConverterString.lower(secretKey), $0
+                FfiConverterString.lower(secretKey),
+                FfiConverterString.lower(clientId), $0
             )
         }
     )
@@ -882,11 +910,33 @@ public func setEventListener(listener: EventListener) {
     }
 }
 
-public func signIn(secretKey: String) -> [String] {
+public func signIn(secretKey: String, clientId: String) -> [String] {
     return try! FfiConverterSequenceString.lift(
         try! rustCall {
             uniffi_pubkycore_fn_func_sign_in(
+                FfiConverterString.lower(secretKey),
+                FfiConverterString.lower(clientId), $0
+            )
+        }
+    )
+}
+
+public func signInCookie(secretKey: String) -> [String] {
+    return try! FfiConverterSequenceString.lift(
+        try! rustCall {
+            uniffi_pubkycore_fn_func_sign_in_cookie(
                 FfiConverterString.lower(secretKey), $0
+            )
+        }
+    )
+}
+
+public func signInGrant(secretKey: String, clientId: String) -> [String] {
+    return try! FfiConverterSequenceString.lift(
+        try! rustCall {
+            uniffi_pubkycore_fn_func_sign_in_grant(
+                FfiConverterString.lower(secretKey),
+                FfiConverterString.lower(clientId), $0
             )
         }
     )
@@ -902,10 +952,23 @@ public func signOut(sessionSecret: String) -> [String] {
     )
 }
 
-public func signUp(secretKey: String, homeserver: String, signupToken: String?) -> [String] {
+public func signUp(secretKey: String, homeserver: String, signupToken: String?, clientId: String) -> [String] {
     return try! FfiConverterSequenceString.lift(
         try! rustCall {
             uniffi_pubkycore_fn_func_sign_up(
+                FfiConverterString.lower(secretKey),
+                FfiConverterString.lower(homeserver),
+                FfiConverterOptionString.lower(signupToken),
+                FfiConverterString.lower(clientId), $0
+            )
+        }
+    )
+}
+
+public func signUpCookie(secretKey: String, homeserver: String, signupToken: String?) -> [String] {
+    return try! FfiConverterSequenceString.lift(
+        try! rustCall {
+            uniffi_pubkycore_fn_func_sign_up_cookie(
                 FfiConverterString.lower(secretKey),
                 FfiConverterString.lower(homeserver),
                 FfiConverterOptionString.lower(signupToken), $0
@@ -914,11 +977,46 @@ public func signUp(secretKey: String, homeserver: String, signupToken: String?) 
     )
 }
 
-public func startAuthFlow(capabilitiesStr: String) -> [String] {
+public func signUpGrant(secretKey: String, homeserver: String, signupToken: String?, clientId: String) -> [String] {
+    return try! FfiConverterSequenceString.lift(
+        try! rustCall {
+            uniffi_pubkycore_fn_func_sign_up_grant(
+                FfiConverterString.lower(secretKey),
+                FfiConverterString.lower(homeserver),
+                FfiConverterOptionString.lower(signupToken),
+                FfiConverterString.lower(clientId), $0
+            )
+        }
+    )
+}
+
+public func startAuthFlow(capabilitiesStr: String, clientId: String) -> [String] {
     return try! FfiConverterSequenceString.lift(
         try! rustCall {
             uniffi_pubkycore_fn_func_start_auth_flow(
+                FfiConverterString.lower(capabilitiesStr),
+                FfiConverterString.lower(clientId), $0
+            )
+        }
+    )
+}
+
+public func startCookieAuthFlow(capabilitiesStr: String) -> [String] {
+    return try! FfiConverterSequenceString.lift(
+        try! rustCall {
+            uniffi_pubkycore_fn_func_start_cookie_auth_flow(
                 FfiConverterString.lower(capabilitiesStr), $0
+            )
+        }
+    )
+}
+
+public func startGrantAuthFlow(capabilitiesStr: String, clientId: String) -> [String] {
+    return try! FfiConverterSequenceString.lift(
+        try! rustCall {
+            uniffi_pubkycore_fn_func_start_grant_auth_flow(
+                FfiConverterString.lower(capabilitiesStr),
+                FfiConverterString.lower(clientId), $0
             )
         }
     )
@@ -950,8 +1048,8 @@ private enum InitializationResult {
     case apiChecksumMismatch
 }
 
-// Use a global variables to perform the versioning checks. Swift ensures that
-// the code inside is only computed once.
+/// Use a global variables to perform the versioning checks. Swift ensures that
+/// the code inside is only computed once.
 private var initializationResult: InitializationResult {
     // Get the bindings contract version from our ComponentInterface
     let bindings_contract_version = 24
@@ -966,13 +1064,19 @@ private var initializationResult: InitializationResult {
     if uniffi_pubkycore_checksum_func_await_auth_approval() != 56488 {
         return InitializationResult.apiChecksumMismatch
     }
+    if uniffi_pubkycore_checksum_func_await_cookie_auth_approval() != 44552 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_pubkycore_checksum_func_await_grant_auth_approval() != 15252 {
+        return InitializationResult.apiChecksumMismatch
+    }
     if uniffi_pubkycore_checksum_func_create_recovery_file() != 48846 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_pubkycore_checksum_func_decrypt_recovery_file() != 26407 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_pubkycore_checksum_func_delete_file() != 47931 {
+    if uniffi_pubkycore_checksum_func_delete_file() != 43485 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_pubkycore_checksum_func_delete_with_session() != 26332 {
@@ -1008,13 +1112,16 @@ private var initializationResult: InitializationResult {
     if uniffi_pubkycore_checksum_func_parse_auth_url() != 27379 {
         return InitializationResult.apiChecksumMismatch
     }
+    if uniffi_pubkycore_checksum_func_parse_deep_link() != 29971 {
+        return InitializationResult.apiChecksumMismatch
+    }
     if uniffi_pubkycore_checksum_func_publish() != 48989 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_pubkycore_checksum_func_publish_https() != 5614 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_pubkycore_checksum_func_put() != 64514 {
+    if uniffi_pubkycore_checksum_func_put() != 32173 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_pubkycore_checksum_func_put_with_session() != 17390 {
@@ -1038,16 +1145,34 @@ private var initializationResult: InitializationResult {
     if uniffi_pubkycore_checksum_func_set_event_listener() != 60071 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_pubkycore_checksum_func_sign_in() != 21584 {
+    if uniffi_pubkycore_checksum_func_sign_in() != 23529 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_pubkycore_checksum_func_sign_in_cookie() != 28058 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_pubkycore_checksum_func_sign_in_grant() != 49219 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_pubkycore_checksum_func_sign_out() != 27163 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_pubkycore_checksum_func_sign_up() != 48789 {
+    if uniffi_pubkycore_checksum_func_sign_up() != 6399 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_pubkycore_checksum_func_start_auth_flow() != 25681 {
+    if uniffi_pubkycore_checksum_func_sign_up_cookie() != 55185 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_pubkycore_checksum_func_sign_up_grant() != 65298 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_pubkycore_checksum_func_start_auth_flow() != 45230 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_pubkycore_checksum_func_start_cookie_auth_flow() != 49536 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_pubkycore_checksum_func_start_grant_auth_flow() != 48937 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_pubkycore_checksum_func_switch_network() != 64215 {

@@ -10,10 +10,8 @@ RCT_EXTERN_METHOD(removeEventListener:(RCTPromiseResolveBlock)resolve
                   withRejecter:(RCTPromiseRejectBlock)reject)
 
 RCT_EXTERN_METHOD(deleteFile:(NSString *)url
-                  withResolver:(RCTPromiseResolveBlock)resolve
-                  withRejecter:(RCTPromiseRejectBlock)reject)
-
-RCT_EXTERN_METHOD(session:(NSString *)pubky
+                  secretKey:(NSString *)secretKey
+                  clientId:(NSString *)clientId
                   withResolver:(RCTPromiseResolveBlock)resolve
                   withRejecter:(RCTPromiseRejectBlock)reject)
 
@@ -23,6 +21,10 @@ RCT_EXTERN_METHOD(auth:(NSString *)url
                   withRejecter:(RCTPromiseRejectBlock)reject)
 
 RCT_EXTERN_METHOD(parseAuthUrl:(NSString *)url
+                  withResolver:(RCTPromiseResolveBlock)resolve
+                  withRejecter:(RCTPromiseRejectBlock)reject)
+
+RCT_EXTERN_METHOD(parseDeepLink:(NSString *)url
                   withResolver:(RCTPromiseResolveBlock)resolve
                   withRejecter:(RCTPromiseRejectBlock)reject)
 
@@ -44,6 +46,20 @@ RCT_EXTERN_METHOD(getSignupToken:(NSString *)homeserverPubky
 RCT_EXTERN_METHOD(signUp:(NSString *)secretKey
                   homeserver:(NSString *)homeserver
                   signupToken:(NSString *)signupToken
+                  clientId:(NSString *)clientId
+                  withResolver:(RCTPromiseResolveBlock)resolve
+                  withRejecter:(RCTPromiseRejectBlock)reject)
+
+RCT_EXTERN_METHOD(signUpGrant:(NSString *)secretKey
+                  homeserver:(NSString *)homeserver
+                  signupToken:(NSString *)signupToken
+                  clientId:(NSString *)clientId
+                  withResolver:(RCTPromiseResolveBlock)resolve
+                  withRejecter:(RCTPromiseRejectBlock)reject)
+
+RCT_EXTERN_METHOD(signUpCookie:(NSString *)secretKey
+                  homeserver:(NSString *)homeserver
+                  signupToken:(NSString *)signupToken
                   withResolver:(RCTPromiseResolveBlock)resolve
                   withRejecter:(RCTPromiseRejectBlock)reject)
 
@@ -53,6 +69,16 @@ RCT_EXTERN_METHOD(republishHomeserver:(NSString *)secretKey
                   withRejecter:(RCTPromiseRejectBlock)reject)
 
 RCT_EXTERN_METHOD(signIn:(NSString *)secretKey
+                  clientId:(NSString *)clientId
+                  withResolver:(RCTPromiseResolveBlock)resolve
+                  withRejecter:(RCTPromiseRejectBlock)reject)
+
+RCT_EXTERN_METHOD(signInGrant:(NSString *)secretKey
+                  clientId:(NSString *)clientId
+                  withResolver:(RCTPromiseResolveBlock)resolve
+                  withRejecter:(RCTPromiseRejectBlock)reject)
+
+RCT_EXTERN_METHOD(signInCookie:(NSString *)secretKey
                   withResolver:(RCTPromiseResolveBlock)resolve
                   withRejecter:(RCTPromiseRejectBlock)reject)
 
@@ -62,6 +88,8 @@ RCT_EXTERN_METHOD(signOut:(NSString *)secretKey
 
 RCT_EXTERN_METHOD(put:(NSString *)url
                   content:(NSString *)content
+                  secretKey:(NSString *)secretKey
+                  clientId:(NSString *)clientId
                   withResolver:(RCTPromiseResolveBlock)resolve
                   withRejecter:(RCTPromiseRejectBlock)reject)
 
@@ -119,10 +147,26 @@ RCT_EXTERN_METHOD(validateMnemonicPhrase:(NSString *)mnemonicPhrase
                   withRejecter:(RCTPromiseRejectBlock)reject)
 
 RCT_EXTERN_METHOD(startAuthFlow:(NSString *)capabilities
+                  clientId:(NSString *)clientId
+                  withResolver:(RCTPromiseResolveBlock)resolve
+                  withRejecter:(RCTPromiseRejectBlock)reject)
+
+RCT_EXTERN_METHOD(startGrantAuthFlow:(NSString *)capabilities
+                  clientId:(NSString *)clientId
+                  withResolver:(RCTPromiseResolveBlock)resolve
+                  withRejecter:(RCTPromiseRejectBlock)reject)
+
+RCT_EXTERN_METHOD(startCookieAuthFlow:(NSString *)capabilities
                   withResolver:(RCTPromiseResolveBlock)resolve
                   withRejecter:(RCTPromiseRejectBlock)reject)
 
 RCT_EXTERN_METHOD(awaitAuthApproval:(RCTPromiseResolveBlock)resolve
+                  withRejecter:(RCTPromiseRejectBlock)reject)
+
+RCT_EXTERN_METHOD(awaitGrantAuthApproval:(RCTPromiseResolveBlock)resolve
+                  withRejecter:(RCTPromiseRejectBlock)reject)
+
+RCT_EXTERN_METHOD(awaitCookieAuthApproval:(RCTPromiseResolveBlock)resolve
                   withRejecter:(RCTPromiseRejectBlock)reject)
 
 RCT_EXTERN_METHOD(putWithSession:(NSString *)url
