@@ -41,12 +41,22 @@ const nativeResultError = (res: unknown): string | null => {
   return null;
 };
 
+const optionalString = (value: string | undefined): string | undefined =>
+  value === '' ? undefined : value;
+
 export async function setEventListener(
   callback: (eventData: string) => void
 ): Promise<Result<void>> {
   try {
     await Pubky.setEventListener();
-    eventEmitter.addListener('PubkyEvent', callback);
+    eventEmitter.addListener('PubkyEvent', (...args: readonly Object[]) => {
+      const eventData = args[0] as unknown;
+      callback(
+        typeof eventData === 'string'
+          ? eventData
+          : nativeErrorMessage(eventData)
+      );
+    });
     return ok(undefined);
   } catch (e) {
     return err(nativeErrorMessage(e));
@@ -89,15 +99,50 @@ export type PubkyAuthDetails = {
   capabilities: Capability[];
   secret: string;
   /**
-   * Auth intent parsed from the deep link host ("signin" | "signup").
+   * Auth intent parsed from the deep link host.
    * Legacy `pubkyauth:///?...` URLs parse as "signin". Absent only when
    * running against a pre-0.9.1 native binary.
    */
-  kind?: 'signin' | 'signup';
+  kind?: 'signin' | 'signup' | 'signin_grant' | 'signup_grant';
   /** Homeserver public key (bare z-base32) from the `hs` param of signup links. */
   homeserver?: string;
   /** Signup token from the `st` param of signup links. */
   signup_token?: string;
+  /** Grant client id from the `cid` param of grant auth links. */
+  client_id?: string;
+  /** Grant client public key from the `cpk` param of grant auth links. */
+  client_public_key?: string;
+  /** x-callback-url source app name. */
+  x_source?: string;
+  /** x-callback-url success callback. */
+  x_success?: string;
+  /** x-callback-url error callback. */
+  x_error?: string;
+  /** x-callback-url cancel callback. */
+  x_cancel?: string;
+};
+
+export type PubkyDeepLinkDetails = {
+  scheme: 'pubkyauth' | 'pubkyring';
+  kind:
+    | 'signin'
+    | 'signup'
+    | 'direct_signup'
+    | 'signin_grant'
+    | 'signup_grant'
+    | 'secret_export';
+  url: string;
+  relay?: string;
+  capabilities?: Capability[];
+  secret?: string;
+  homeserver?: string;
+  signup_token?: string;
+  client_id?: string;
+  client_public_key?: string;
+  x_source?: string;
+  x_success?: string;
+  x_error?: string;
+  x_cancel?: string;
 };
 
 export async function parseAuthUrl(
@@ -105,6 +150,22 @@ export async function parseAuthUrl(
 ): Promise<Result<PubkyAuthDetails>> {
   try {
     const res = await Pubky.parseAuthUrl(url);
+    const errorMessage = nativeResultError(res);
+    if (errorMessage) {
+      return err(errorMessage);
+    }
+    const parsed = JSON.parse(res[1]);
+    return ok(parsed);
+  } catch (e) {
+    return err(nativeErrorMessage(e));
+  }
+}
+
+export async function parseDeepLink(
+  url: string
+): Promise<Result<PubkyDeepLinkDetails>> {
+  try {
+    const res = await Pubky.parseDeepLink(url);
     const errorMessage = nativeResultError(res);
     if (errorMessage) {
       return err(errorMessage);
@@ -187,10 +248,46 @@ export async function getSignupToken(
 export async function signUp(
   secretKey: string,
   homeserver: string,
-  signupToken?: string
+  signupToken: string | undefined,
+  clientId: string
 ): Promise<Result<SessionInfo>> {
+  return signUpGrant(secretKey, homeserver, signupToken, clientId);
+}
+
+export async function signUpGrant(
+  secretKey: string,
+  homeserver: string,
+  signupToken: string | undefined,
+  clientId: string
+): Promise<Result<GrantSessionInfo>> {
   try {
-    const res = await Pubky.signUp(secretKey, homeserver, signupToken);
+    const res = await Pubky.signUpGrant(
+      secretKey,
+      homeserver,
+      optionalString(signupToken),
+      clientId
+    );
+    const errorMessage = nativeResultError(res);
+    if (errorMessage) {
+      return err(errorMessage);
+    }
+    return ok(JSON.parse(res[1]));
+  } catch (e) {
+    return err(nativeErrorMessage(e));
+  }
+}
+
+export async function signUpCookie(
+  secretKey: string,
+  homeserver: string,
+  signupToken: string | undefined
+): Promise<Result<CookieSessionInfo>> {
+  try {
+    const res = await Pubky.signUpCookie(
+      secretKey,
+      homeserver,
+      optionalString(signupToken)
+    );
     const errorMessage = nativeResultError(res);
     if (errorMessage) {
       return err(errorMessage);
@@ -217,9 +314,34 @@ export async function republishHomeserver(
   }
 }
 
-export async function signIn(secretKey: string): Promise<Result<SessionInfo>> {
+export async function signIn(
+  secretKey: string,
+  clientId: string
+): Promise<Result<SessionInfo>> {
+  return signInGrant(secretKey, clientId);
+}
+
+export async function signInGrant(
+  secretKey: string,
+  clientId: string
+): Promise<Result<GrantSessionInfo>> {
   try {
-    const res = await Pubky.signIn(secretKey);
+    const res = await Pubky.signInGrant(secretKey, clientId);
+    const errorMessage = nativeResultError(res);
+    if (errorMessage) {
+      return err(errorMessage);
+    }
+    return ok(JSON.parse(res[1]));
+  } catch (e) {
+    return err(nativeErrorMessage(e));
+  }
+}
+
+export async function signInCookie(
+  secretKey: string
+): Promise<Result<CookieSessionInfo>> {
+  try {
+    const res = await Pubky.signInCookie(secretKey);
     const errorMessage = nativeResultError(res);
     if (errorMessage) {
       return err(errorMessage);
@@ -245,7 +367,7 @@ export async function signOut(sessionSecret: string): Promise<Result<string>> {
 
 export async function revalidateSession(
   sessionSecret: string
-): Promise<Result<SessionInfo>> {
+): Promise<Result<SessionInfo | CookieSessionInfo>> {
   try {
     const res = await Pubky.revalidateSession(sessionSecret);
     const errorMessage = nativeResultError(res);
@@ -278,10 +400,16 @@ export async function get(url: string): Promise<Result<string>> {
 export async function put(
   url: string,
   content: Object,
-  secretKey: string
+  secretKey: string,
+  clientId: string
 ): Promise<Result<string[]>> {
   try {
-    const res = await Pubky.put(url, JSON.stringify(content), secretKey);
+    const res = await Pubky.put(
+      url,
+      JSON.stringify(content),
+      secretKey,
+      clientId
+    );
     const errorMessage = nativeResultError(res);
     if (errorMessage) {
       return err(errorMessage);
@@ -354,10 +482,11 @@ export async function list(url: string): Promise<Result<string[]>> {
 
 export async function deleteFile(
   url: string,
-  secretKey: string
+  secretKey: string,
+  clientId: string
 ): Promise<Result<string[]>> {
   try {
-    const res = await Pubky.deleteFile(url, secretKey);
+    const res = await Pubky.deleteFile(url, secretKey, clientId);
     const errorMessage = nativeResultError(res);
     if (errorMessage) {
       return err(errorMessage);
@@ -368,11 +497,19 @@ export async function deleteFile(
   }
 }
 
-export interface SessionInfo {
+export interface GrantSessionInfo {
+  pubky: string;
+  capabilities: string[];
+  grant_secret: string;
+}
+
+export interface CookieSessionInfo {
   pubky: string;
   capabilities: string[];
   session_secret: string;
 }
+
+export type SessionInfo = GrantSessionInfo;
 
 export interface IPublicKeyInfo {
   public_key: string;
@@ -517,10 +654,18 @@ export async function validateMnemonicPhrase(
 }
 
 export async function startAuthFlow(
-  capabilities: string
+  capabilities: string,
+  clientId: string
+): Promise<Result<string>> {
+  return startGrantAuthFlow(capabilities, clientId);
+}
+
+export async function startGrantAuthFlow(
+  capabilities: string,
+  clientId: string
 ): Promise<Result<string>> {
   try {
-    const res = await Pubky.startAuthFlow(capabilities);
+    const res = await Pubky.startGrantAuthFlow(capabilities, clientId);
     const errorMessage = nativeResultError(res);
     if (errorMessage) {
       return err(errorMessage);
@@ -532,8 +677,44 @@ export async function startAuthFlow(
 }
 
 export async function awaitAuthApproval(): Promise<Result<SessionInfo>> {
+  return awaitGrantAuthApproval();
+}
+
+export async function awaitGrantAuthApproval(): Promise<
+  Result<GrantSessionInfo>
+> {
   try {
-    const res = await Pubky.awaitAuthApproval();
+    const res = await Pubky.awaitGrantAuthApproval();
+    const errorMessage = nativeResultError(res);
+    if (errorMessage) {
+      return err(errorMessage);
+    }
+    return ok(JSON.parse(res[1]));
+  } catch (e) {
+    return err(nativeErrorMessage(e));
+  }
+}
+
+export async function startCookieAuthFlow(
+  capabilities: string
+): Promise<Result<string>> {
+  try {
+    const res = await Pubky.startCookieAuthFlow(capabilities);
+    const errorMessage = nativeResultError(res);
+    if (errorMessage) {
+      return err(errorMessage);
+    }
+    return ok(res[1]);
+  } catch (e) {
+    return err(nativeErrorMessage(e));
+  }
+}
+
+export async function awaitCookieAuthApproval(): Promise<
+  Result<CookieSessionInfo>
+> {
+  try {
+    const res = await Pubky.awaitCookieAuthApproval();
     const errorMessage = nativeResultError(res);
     if (errorMessage) {
       return err(errorMessage);

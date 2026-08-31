@@ -70,24 +70,30 @@ void uniffi_pubkycore_fn_init_callback_eventlistener(ForeignCallback _Nonnull ca
 RustBuffer uniffi_pubkycore_fn_func_auth(RustBuffer url, RustBuffer secret_key, RustCallStatus *_Nonnull out_status
 );
 RustBuffer uniffi_pubkycore_fn_func_await_auth_approval(RustCallStatus *_Nonnull out_status
-    
+
+);
+RustBuffer uniffi_pubkycore_fn_func_await_cookie_auth_approval(RustCallStatus *_Nonnull out_status
+
+);
+RustBuffer uniffi_pubkycore_fn_func_await_grant_auth_approval(RustCallStatus *_Nonnull out_status
+
 );
 RustBuffer uniffi_pubkycore_fn_func_create_recovery_file(RustBuffer secret_key, RustBuffer passphrase, RustCallStatus *_Nonnull out_status
 );
 RustBuffer uniffi_pubkycore_fn_func_decrypt_recovery_file(RustBuffer recovery_file, RustBuffer passphrase, RustCallStatus *_Nonnull out_status
 );
-RustBuffer uniffi_pubkycore_fn_func_delete_file(RustBuffer url, RustBuffer secret_key, RustCallStatus *_Nonnull out_status
+RustBuffer uniffi_pubkycore_fn_func_delete_file(RustBuffer url, RustBuffer secret_key, RustBuffer client_id, RustCallStatus *_Nonnull out_status
 );
 RustBuffer uniffi_pubkycore_fn_func_delete_with_session(RustBuffer url, RustBuffer session_secret, RustCallStatus *_Nonnull out_status
 );
 RustBuffer uniffi_pubkycore_fn_func_generate_mnemonic_phrase(RustCallStatus *_Nonnull out_status
-    
+
 );
 RustBuffer uniffi_pubkycore_fn_func_generate_mnemonic_phrase_and_keypair(RustCallStatus *_Nonnull out_status
-    
+
 );
 RustBuffer uniffi_pubkycore_fn_func_generate_secret_key(RustCallStatus *_Nonnull out_status
-    
+
 );
 RustBuffer uniffi_pubkycore_fn_func_get(RustBuffer url, RustCallStatus *_Nonnull out_status
 );
@@ -103,16 +109,18 @@ RustBuffer uniffi_pubkycore_fn_func_mnemonic_phrase_to_keypair(RustBuffer mnemon
 );
 RustBuffer uniffi_pubkycore_fn_func_parse_auth_url(RustBuffer url, RustCallStatus *_Nonnull out_status
 );
+RustBuffer uniffi_pubkycore_fn_func_parse_deep_link(RustBuffer url, RustCallStatus *_Nonnull out_status
+);
 RustBuffer uniffi_pubkycore_fn_func_publish(RustBuffer record_name, RustBuffer record_content, RustBuffer secret_key, RustCallStatus *_Nonnull out_status
 );
 RustBuffer uniffi_pubkycore_fn_func_publish_https(RustBuffer record_name, RustBuffer target, RustBuffer secret_key, RustCallStatus *_Nonnull out_status
 );
-RustBuffer uniffi_pubkycore_fn_func_put(RustBuffer url, RustBuffer content, RustBuffer secret_key, RustCallStatus *_Nonnull out_status
+RustBuffer uniffi_pubkycore_fn_func_put(RustBuffer url, RustBuffer content, RustBuffer secret_key, RustBuffer client_id, RustCallStatus *_Nonnull out_status
 );
 RustBuffer uniffi_pubkycore_fn_func_put_with_session(RustBuffer url, RustBuffer content, RustBuffer session_secret, RustCallStatus *_Nonnull out_status
 );
 void uniffi_pubkycore_fn_func_remove_event_listener(RustCallStatus *_Nonnull out_status
-    
+
 );
 RustBuffer uniffi_pubkycore_fn_func_republish_homeserver(RustBuffer secret_key, RustBuffer homeserver, RustCallStatus *_Nonnull out_status
 );
@@ -124,13 +132,25 @@ RustBuffer uniffi_pubkycore_fn_func_revalidate_session(RustBuffer session_secret
 );
 void uniffi_pubkycore_fn_func_set_event_listener(uint64_t listener, RustCallStatus *_Nonnull out_status
 );
-RustBuffer uniffi_pubkycore_fn_func_sign_in(RustBuffer secret_key, RustCallStatus *_Nonnull out_status
+RustBuffer uniffi_pubkycore_fn_func_sign_in(RustBuffer secret_key, RustBuffer client_id, RustCallStatus *_Nonnull out_status
+);
+RustBuffer uniffi_pubkycore_fn_func_sign_in_cookie(RustBuffer secret_key, RustCallStatus *_Nonnull out_status
+);
+RustBuffer uniffi_pubkycore_fn_func_sign_in_grant(RustBuffer secret_key, RustBuffer client_id, RustCallStatus *_Nonnull out_status
 );
 RustBuffer uniffi_pubkycore_fn_func_sign_out(RustBuffer session_secret, RustCallStatus *_Nonnull out_status
 );
-RustBuffer uniffi_pubkycore_fn_func_sign_up(RustBuffer secret_key, RustBuffer homeserver, RustBuffer signup_token, RustCallStatus *_Nonnull out_status
+RustBuffer uniffi_pubkycore_fn_func_sign_up(RustBuffer secret_key, RustBuffer homeserver, RustBuffer signup_token, RustBuffer client_id, RustCallStatus *_Nonnull out_status
 );
-RustBuffer uniffi_pubkycore_fn_func_start_auth_flow(RustBuffer capabilities_str, RustCallStatus *_Nonnull out_status
+RustBuffer uniffi_pubkycore_fn_func_sign_up_cookie(RustBuffer secret_key, RustBuffer homeserver, RustBuffer signup_token, RustCallStatus *_Nonnull out_status
+);
+RustBuffer uniffi_pubkycore_fn_func_sign_up_grant(RustBuffer secret_key, RustBuffer homeserver, RustBuffer signup_token, RustBuffer client_id, RustCallStatus *_Nonnull out_status
+);
+RustBuffer uniffi_pubkycore_fn_func_start_auth_flow(RustBuffer capabilities_str, RustBuffer client_id, RustCallStatus *_Nonnull out_status
+);
+RustBuffer uniffi_pubkycore_fn_func_start_cookie_auth_flow(RustBuffer capabilities_str, RustCallStatus *_Nonnull out_status
+);
+RustBuffer uniffi_pubkycore_fn_func_start_grant_auth_flow(RustBuffer capabilities_str, RustBuffer client_id, RustCallStatus *_Nonnull out_status
 );
 RustBuffer uniffi_pubkycore_fn_func_switch_network(int8_t use_testnet, RustCallStatus *_Nonnull out_status
 );
@@ -251,105 +271,132 @@ void ffi_pubkycore_rust_future_free_void(void* _Nonnull handle
 void ffi_pubkycore_rust_future_complete_void(void* _Nonnull handle, RustCallStatus *_Nonnull out_status
 );
 uint16_t uniffi_pubkycore_checksum_func_auth(void
-    
+
 );
 uint16_t uniffi_pubkycore_checksum_func_await_auth_approval(void
-    
+
+);
+uint16_t uniffi_pubkycore_checksum_func_await_cookie_auth_approval(void
+
+);
+uint16_t uniffi_pubkycore_checksum_func_await_grant_auth_approval(void
+
 );
 uint16_t uniffi_pubkycore_checksum_func_create_recovery_file(void
-    
+
 );
 uint16_t uniffi_pubkycore_checksum_func_decrypt_recovery_file(void
-    
+
 );
 uint16_t uniffi_pubkycore_checksum_func_delete_file(void
-    
+
 );
 uint16_t uniffi_pubkycore_checksum_func_delete_with_session(void
-    
+
 );
 uint16_t uniffi_pubkycore_checksum_func_generate_mnemonic_phrase(void
-    
+
 );
 uint16_t uniffi_pubkycore_checksum_func_generate_mnemonic_phrase_and_keypair(void
-    
+
 );
 uint16_t uniffi_pubkycore_checksum_func_generate_secret_key(void
-    
+
 );
 uint16_t uniffi_pubkycore_checksum_func_get(void
-    
+
 );
 uint16_t uniffi_pubkycore_checksum_func_get_homeserver(void
-    
+
 );
 uint16_t uniffi_pubkycore_checksum_func_get_public_key_from_secret_key(void
-    
+
 );
 uint16_t uniffi_pubkycore_checksum_func_get_signup_token(void
-    
+
 );
 uint16_t uniffi_pubkycore_checksum_func_list(void
-    
+
 );
 uint16_t uniffi_pubkycore_checksum_func_mnemonic_phrase_to_keypair(void
-    
+
 );
 uint16_t uniffi_pubkycore_checksum_func_parse_auth_url(void
-    
+
+);
+uint16_t uniffi_pubkycore_checksum_func_parse_deep_link(void
+
 );
 uint16_t uniffi_pubkycore_checksum_func_publish(void
-    
+
 );
 uint16_t uniffi_pubkycore_checksum_func_publish_https(void
-    
+
 );
 uint16_t uniffi_pubkycore_checksum_func_put(void
-    
+
 );
 uint16_t uniffi_pubkycore_checksum_func_put_with_session(void
-    
+
 );
 uint16_t uniffi_pubkycore_checksum_func_remove_event_listener(void
-    
+
 );
 uint16_t uniffi_pubkycore_checksum_func_republish_homeserver(void
-    
+
 );
 uint16_t uniffi_pubkycore_checksum_func_resolve(void
-    
+
 );
 uint16_t uniffi_pubkycore_checksum_func_resolve_https(void
-    
+
 );
 uint16_t uniffi_pubkycore_checksum_func_revalidate_session(void
-    
+
 );
 uint16_t uniffi_pubkycore_checksum_func_set_event_listener(void
-    
+
 );
 uint16_t uniffi_pubkycore_checksum_func_sign_in(void
-    
+
+);
+uint16_t uniffi_pubkycore_checksum_func_sign_in_cookie(void
+
+);
+uint16_t uniffi_pubkycore_checksum_func_sign_in_grant(void
+
 );
 uint16_t uniffi_pubkycore_checksum_func_sign_out(void
-    
+
 );
 uint16_t uniffi_pubkycore_checksum_func_sign_up(void
-    
+
+);
+uint16_t uniffi_pubkycore_checksum_func_sign_up_cookie(void
+
+);
+uint16_t uniffi_pubkycore_checksum_func_sign_up_grant(void
+
 );
 uint16_t uniffi_pubkycore_checksum_func_start_auth_flow(void
-    
+
+);
+uint16_t uniffi_pubkycore_checksum_func_start_cookie_auth_flow(void
+
+);
+uint16_t uniffi_pubkycore_checksum_func_start_grant_auth_flow(void
+
 );
 uint16_t uniffi_pubkycore_checksum_func_switch_network(void
-    
+
 );
 uint16_t uniffi_pubkycore_checksum_func_validate_mnemonic_phrase(void
-    
+
 );
 uint16_t uniffi_pubkycore_checksum_method_eventlistener_on_event_occurred(void
-    
+
 );
 uint32_t ffi_pubkycore_uniffi_contract_version(void
-    
+
 );
 

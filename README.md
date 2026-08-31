@@ -17,10 +17,11 @@ npm install @synonymdev/react-native-pubky
 - [x] [publishHttps](#publishHttps): Publish HTTPS records.
 - [x] [resolveHttps](#resolveHttps): Resolve HTTPS records.
 - [x] [getSignupToken](#getSignupToken): Get a signup token from a homeserver with admin credentials.
-- [x] [signUp](#signUp): Sign-up to a homeserver and update Pkarr accordingly, with optional signup token support.
+- [x] [signUp](#signUp): Grant sign-up to a homeserver and update Pkarr accordingly, with optional signup token support.
+- [x] signUpGrant / signUpCookie: Explicit Grant and legacy cookie sign-up methods.
 - [x] [republishHomeserver](#republishHomeserver): Republish homeserver information to the DHT.
-- [x] [signIn](#signIn): Sign-in to a homeserver.
-- [x] [session](#session): Check the current session for a given Pubky in its homeserver.
+- [x] [signIn](#signIn): Grant sign-in to a homeserver.
+- [x] signInGrant / signInCookie: Explicit Grant and legacy cookie sign-in methods.
 - [x] [signOut](#signOut): Sign-out from a homeserver.
 - [x] [put](#put): Upload a small payload to a given path.
 - [x] [get](#get): Download a small payload from a given path relative to a pubky author.
@@ -31,11 +32,16 @@ npm install @synonymdev/react-native-pubky
 - [x] [create_recovery_file](#createRecoveryFile): Create a recovery file.
 - [x] [decrypt_recovery_file](#decryptRecoveryFile): Decrypt a recovery file.
 - [x] [getHomeserver](#getHomeserver): Get homeserver URL from a public key.
-- [x] [startAuthFlow](#startAuthFlow): Start a Ring authentication flow with requested capabilities.
-- [x] [awaitAuthApproval](#awaitAuthApproval): Await approval of a pending Ring auth flow.
+- [x] [startAuthFlow](#startAuthFlow): Start a Grant authentication flow with requested capabilities.
+- [x] [awaitAuthApproval](#awaitAuthApproval): Await approval of a pending Grant auth flow.
+- [x] startGrantAuthFlow / startCookieAuthFlow: Explicit Grant and legacy cookie auth-flow methods.
+- [x] awaitGrantAuthApproval / awaitCookieAuthApproval: Await explicit Grant and legacy cookie auth flows.
 - [x] [putWithSession](#putWithSession): Upload content to a path using session-based authentication.
 - [x] [deleteWithSession](#deleteWithSession): Delete content at a path using session-based authentication.
 ## Usage
+
+`signUp`, `signIn`, `startAuthFlow`, and `awaitAuthApproval` are Grant-auth aliases. Use the explicit `*Grant` names when the distinction matters. Legacy cookie auth is still exposed through the explicit `*Cookie` methods because the native binding mirrors upstream `pubky`, but cookie auth is deprecated upstream.
+
 ### <a name="auth"></a>Auth
 ```js
 import { auth } from '@synonymdev/react-native-pubky';
@@ -54,7 +60,7 @@ console.log(authRes.value);
 ```js
 import { parseAuthUrl } from '@synonymdev/react-native-pubky';
 
-const pubkyAuthUrl = 'pubkyauth:///?relay=https://demo.httprelay.io/link&capabilities=/pub/pubky.app:rw,/pub/example.com/nested:rw&secret=FyzJ3gJ1W7boyFZC1Do9fYrRmDNgCLNRwEu_gaBgPUA';
+const pubkyAuthUrl = 'pubkyauth:///?relay=https://demo.httprelay.io/link&capabilities=/pub/pubky.app/:rw,/pub/example.com/nested/:rw&secret=FyzJ3gJ1W7boyFZC1Do9fYrRmDNgCLNRwEu_gaBgPUA';
 const parseRes = await parseAuthUrl(pubkyAuthUrl);
 if (parseRes.isErr()) {
   console.log(parseRes.error.message);
@@ -128,6 +134,8 @@ import { put } from '@synonymdev/react-native-pubky';
 const putRes = await put(
   'pubky://z4e8s17cou9qmuwen8p1556jzhf1wktmzo6ijsfnri9c4hnrdfty/pub/synonym.to', // URL
   { data: 'test content' }, // Content
+  'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', // Secret Key
+  'my-app.example' // Client ID
 );
 if (putRes.isErr()) {
   console.log(putRes.error.message);
@@ -169,7 +177,9 @@ console.log(listRes.value);
 import { deleteFile } from '@synonymdev/react-native-pubky';
 
 const deleteFileRes = await deleteFile(
-  'pubky://z4e8s17cou9qmuwen8p1556jzhf1wktmzo6ijsfnri9c4hnrdfty/pub/' // URL
+  'pubky://z4e8s17cou9qmuwen8p1556jzhf1wktmzo6ijsfnri9c4hnrdfty/pub/', // URL
+  'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', // Secret Key
+  'my-app.example' // Client ID
 );
 if (deleteFileRes.isErr()) {
   console.log(deleteFileRes.error.message);
@@ -219,12 +229,14 @@ console.log('Signup Token:', getSignupTokenRes.value);
 
 ### <a name="signUp"></a>signUp
 ```js
-import { signUp } from '@synonymdev/react-native-pubky';
+import { signUp, signUpCookie } from '@synonymdev/react-native-pubky';
 
 // Standard signup
 const signUpRes = await signUp(
   'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', // Secret
   'pubky://8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo', // Homeserver
+  undefined, // Optional signup token
+  'my-app.example' // Client ID
 );
 if (signUpRes.isErr()) {
   console.log(signUpRes.error.message);
@@ -236,13 +248,25 @@ console.log(signUpRes.value);
 const signUpWithTokenRes = await signUp(
   'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', // Secret
   'pubky://8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo', // Homeserver
-  'your_signup_token' // Optional signup token
+  'your_signup_token', // Optional signup token
+  'my-app.example' // Client ID
 );
 if (signUpWithTokenRes.isErr()) {
   console.log(signUpWithTokenRes.error.message);
   return;
 }
 console.log(signUpWithTokenRes.value);
+
+const cookieSignUpRes = await signUpCookie(
+  'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', // Secret
+  'pubky://8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo', // Homeserver
+  undefined // Optional signup token
+);
+if (cookieSignUpRes.isErr()) {
+  console.log(cookieSignUpRes.error.message);
+  return;
+}
+console.log(cookieSignUpRes.value); // { pubky, capabilities, session_secret }
 ```
 
 ### <a name="republishHomeserver"></a>republishHomeserver
@@ -262,30 +286,26 @@ console.log(republishRes.value); // "Homeserver republished successfully"
 
 ### <a name="signIn"></a>signIn
 ```js
-import { signIn } from '@synonymdev/react-native-pubky';
+import { signIn, signInCookie } from '@synonymdev/react-native-pubky';
 
 const signInRes = await signIn(
-  'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' // Secret Key
+  'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', // Secret Key
+  'my-app.example' // Client ID
 );
 if (signInRes.isErr()) {
   console.log(signInRes.error.message);
   return;
 }
 console.log(signInRes.value);
-```
 
-### <a name="session"></a>sessionRes
-```js
-import { session } from '@synonymdev/react-native-pubky';
-
-const sessionRes = await session(
-  'z4e8s17cou9qmuwen8p1556jzhf1wktmzo6ijsfnri9c4hnrdfty' // Public Key
+const cookieSignInRes = await signInCookie(
+  'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' // Secret Key
 );
-if (sessionRes.isErr()) {
-  console.log(sessionRes.error.message);
+if (cookieSignInRes.isErr()) {
+  console.log(cookieSignInRes.error.message);
   return;
 }
-console.log(sessionRes.value);
+console.log(cookieSignInRes.value); // { pubky, capabilities, session_secret }
 ```
 
 ### <a name="getHomeserver"></a>getHomeserver
@@ -302,12 +322,12 @@ if (getHomeserverRes.isErr()) {
 console.log(getHomeserverRes.value);
 ```
 
-### <a name="signOut"></a>signIn
+### <a name="signOut"></a>signOut
 ```js
 import { signOut } from '@synonymdev/react-native-pubky';
 
 const signOutRes = await signOut(
-  'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' // Secret Key
+  'grant_or_cookie_session_secret' // grant_secret or session_secret
 );
 if (signOutRes.isErr()) {
   console.log(signOutRes.error.message);
@@ -347,29 +367,43 @@ console.log(decryptRecoveryFileRes.value);
 ```
 
 ### <a name="startAuthFlow"></a>startAuthFlow
-Start a Ring authentication flow with requested capabilities. Returns a URL to present to the user for approval.
+Start a Grant authentication flow with requested capabilities. Returns a URL to present to the user for approval.
 ```js
-import { startAuthFlow } from '@synonymdev/react-native-pubky';
+import { startAuthFlow, startCookieAuthFlow } from '@synonymdev/react-native-pubky';
 
-const startRes = await startAuthFlow('/pub/att.app/:rw');
+const startRes = await startAuthFlow('/pub/att.app/:rw', 'my-app.example');
 if (startRes.isErr()) {
   console.log(startRes.error.message);
   return;
 }
 console.log(startRes.value); // Auth URL to present to user
+
+const cookieStartRes = await startCookieAuthFlow('/pub/att.app/:rw');
+if (cookieStartRes.isErr()) {
+  console.log(cookieStartRes.error.message);
+  return;
+}
+console.log(cookieStartRes.value); // Legacy cookie auth URL
 ```
 
 ### <a name="awaitAuthApproval"></a>awaitAuthApproval
 Await approval of a pending Ring auth flow. Returns session info upon approval.
 ```js
-import { awaitAuthApproval } from '@synonymdev/react-native-pubky';
+import { awaitAuthApproval, awaitCookieAuthApproval } from '@synonymdev/react-native-pubky';
 
 const approvalRes = await awaitAuthApproval();
 if (approvalRes.isErr()) {
   console.log(approvalRes.error.message);
   return;
 }
-console.log(approvalRes.value); // { pubky, capabilities, session_secret }
+console.log(approvalRes.value); // { pubky, capabilities, grant_secret }
+
+const cookieApprovalRes = await awaitCookieAuthApproval();
+if (cookieApprovalRes.isErr()) {
+  console.log(cookieApprovalRes.error.message);
+  return;
+}
+console.log(cookieApprovalRes.value); // { pubky, capabilities, session_secret }
 ```
 
 ### <a name="putWithSession"></a>putWithSession
@@ -380,7 +414,7 @@ import { putWithSession } from '@synonymdev/react-native-pubky';
 const putRes = await putWithSession(
   'pubky://z4e8s17cou9qmuwen8p1556jzhf1wktmzo6ijsfnri9c4hnrdfty/pub/app/profile.json', // URL
   JSON.stringify({ name: 'Alice' }), // Content (string)
-  'session_secret_from_auth_flow' // Session Secret
+  'grant_or_cookie_session_secret' // grant_secret or session_secret
 );
 if (putRes.isErr()) {
   console.log(putRes.error.message);
@@ -396,7 +430,7 @@ import { deleteWithSession } from '@synonymdev/react-native-pubky';
 
 const deleteRes = await deleteWithSession(
   'pubky://z4e8s17cou9qmuwen8p1556jzhf1wktmzo6ijsfnri9c4hnrdfty/pub/app/profile.json', // URL
-  'session_secret_from_auth_flow' // Session Secret
+  'grant_or_cookie_session_secret' // grant_secret or session_secret
 );
 if (deleteRes.isErr()) {
   console.log(deleteRes.error.message);

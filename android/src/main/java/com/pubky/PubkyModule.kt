@@ -66,10 +66,10 @@ class PubkyModule(reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
-    fun deleteFile(url: String, secretKey: String, promise: Promise) {
+    fun deleteFile(url: String, secretKey: String, clientId: String, promise: Promise) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val result = deleteFile(url, secretKey)
+                val result = deleteFile(url, secretKey, clientId)
                 val array = Arguments.createArray().apply {
                     result.forEach { pushString(it) }
                 }
@@ -107,6 +107,19 @@ class PubkyModule(reactContext: ReactApplicationContext) :
     fun parseAuthUrl(url: String, promise: Promise) {
         try {
             val result = parseAuthUrl(url)
+            val array = Arguments.createArray().apply {
+                result.forEach { pushString(it) }
+            }
+            promise.resolve(array)
+        } catch (e: Exception) {
+            promise.reject("Error", e.message)
+        }
+    }
+
+    @ReactMethod
+    fun parseDeepLink(url: String, promise: Promise) {
+        try {
+            val result = parseDeepLink(url)
             val array = Arguments.createArray().apply {
                 result.forEach { pushString(it) }
             }
@@ -174,10 +187,48 @@ class PubkyModule(reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
-    fun signUp(secretKey: String, homeserver: String, signupToken: String?, promise: Promise) {
+    fun signUp(secretKey: String, homeserver: String, signupToken: String?, clientId: String, promise: Promise) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val result = signUp(secretKey, homeserver, signupToken)
+                val result = signUp(secretKey, homeserver, signupToken, clientId)
+                val array = Arguments.createArray().apply {
+                    result.forEach { pushString(it) }
+                }
+                withContext(Dispatchers.Main) {
+                    promise.resolve(array)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    promise.reject("Error", e.message)
+                }
+            }
+        }
+    }
+
+    @ReactMethod
+    fun signUpGrant(secretKey: String, homeserver: String, signupToken: String?, clientId: String, promise: Promise) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val result = signUpGrant(secretKey, homeserver, signupToken, clientId)
+                val array = Arguments.createArray().apply {
+                    result.forEach { pushString(it) }
+                }
+                withContext(Dispatchers.Main) {
+                    promise.resolve(array)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    promise.reject("Error", e.message)
+                }
+            }
+        }
+    }
+
+    @ReactMethod
+    fun signUpCookie(secretKey: String, homeserver: String, signupToken: String?, promise: Promise) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val result = signUpCookie(secretKey, homeserver, signupToken)
                 val array = Arguments.createArray().apply {
                     result.forEach { pushString(it) }
                 }
@@ -212,10 +263,48 @@ class PubkyModule(reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
-    fun signIn(secretKey: String, promise: Promise) {
+    fun signIn(secretKey: String, clientId: String, promise: Promise) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val result = signIn(secretKey)
+                val result = signIn(secretKey, clientId)
+                val array = Arguments.createArray().apply {
+                    result.forEach { pushString(it) }
+                }
+                withContext(Dispatchers.Main) {
+                    promise.resolve(array)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    promise.reject("Error", e.message)
+                }
+            }
+        }
+    }
+
+    @ReactMethod
+    fun signInGrant(secretKey: String, clientId: String, promise: Promise) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val result = signInGrant(secretKey, clientId)
+                val array = Arguments.createArray().apply {
+                    result.forEach { pushString(it) }
+                }
+                withContext(Dispatchers.Main) {
+                    promise.resolve(array)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    promise.reject("Error", e.message)
+                }
+            }
+        }
+    }
+
+    @ReactMethod
+    fun signInCookie(secretKey: String, promise: Promise) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val result = signInCookie(secretKey)
                 val array = Arguments.createArray().apply {
                     result.forEach { pushString(it) }
                 }
@@ -269,10 +358,10 @@ class PubkyModule(reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
-    fun put(url: String, content: String, secretKey: String, promise: Promise) {
+    fun put(url: String, content: String, secretKey: String, clientId: String, promise: Promise) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val result = put(url, content, secretKey)
+                val result = put(url, content, secretKey, clientId)
                 val array = Arguments.createArray().apply {
                     result.forEach { pushString(it) }
                 }
@@ -535,10 +624,48 @@ class PubkyModule(reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
-    fun startAuthFlow(capabilities: String, promise: Promise) {
+    fun startAuthFlow(capabilities: String, clientId: String, promise: Promise) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val result = startAuthFlow(capabilities)
+                val result = startAuthFlow(capabilities, clientId)
+                val array = Arguments.createArray().apply {
+                    result.forEach { pushString(it) }
+                }
+                withContext(Dispatchers.Main) {
+                    promise.resolve(array)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    promise.reject("Error", e.message)
+                }
+            }
+        }
+    }
+
+    @ReactMethod
+    fun startGrantAuthFlow(capabilities: String, clientId: String, promise: Promise) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val result = startGrantAuthFlow(capabilities, clientId)
+                val array = Arguments.createArray().apply {
+                    result.forEach { pushString(it) }
+                }
+                withContext(Dispatchers.Main) {
+                    promise.resolve(array)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    promise.reject("Error", e.message)
+                }
+            }
+        }
+    }
+
+    @ReactMethod
+    fun startCookieAuthFlow(capabilities: String, promise: Promise) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val result = startCookieAuthFlow(capabilities)
                 val array = Arguments.createArray().apply {
                     result.forEach { pushString(it) }
                 }
@@ -558,6 +685,44 @@ class PubkyModule(reactContext: ReactApplicationContext) :
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val result = awaitAuthApproval()
+                val array = Arguments.createArray().apply {
+                    result.forEach { pushString(it) }
+                }
+                withContext(Dispatchers.Main) {
+                    promise.resolve(array)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    promise.reject("Error", e.message)
+                }
+            }
+        }
+    }
+
+    @ReactMethod
+    fun awaitGrantAuthApproval(promise: Promise) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val result = awaitGrantAuthApproval()
+                val array = Arguments.createArray().apply {
+                    result.forEach { pushString(it) }
+                }
+                withContext(Dispatchers.Main) {
+                    promise.resolve(array)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    promise.reject("Error", e.message)
+                }
+            }
+        }
+    }
+
+    @ReactMethod
+    fun awaitCookieAuthApproval(promise: Promise) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val result = awaitCookieAuthApproval()
                 val array = Arguments.createArray().apply {
                     result.forEach { pushString(it) }
                 }

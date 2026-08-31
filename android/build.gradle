@@ -24,7 +24,7 @@ def isNewArchitectureEnabled() {
 }
 
 apply plugin: "com.android.library"
-apply plugin: "kotlin-android"
+apply plugin: "org.jetbrains.kotlin.android"
 
 // Disable New Architecture plugin for this library to prevent codegen from
 // generating duplicate React Native core classes
@@ -60,11 +60,11 @@ android {
     }
   }
 
-  compileSdkVersion getExtOrIntegerDefault("compileSdkVersion")
+  compileSdk getExtOrIntegerDefault("compileSdkVersion")
 
   defaultConfig {
-    minSdkVersion getExtOrIntegerDefault("minSdkVersion")
-    targetSdkVersion getExtOrIntegerDefault("targetSdkVersion")
+    minSdk getExtOrIntegerDefault("minSdkVersion")
+    targetSdk getExtOrIntegerDefault("targetSdkVersion")
 
   }
 
@@ -105,4 +105,3 @@ dependencies {
   // certificate verification fails. Vendored from the rustls-platform-verifier-android crate.
   implementation(files("libs/rustls-platform-verifier.jar"))
 }
-
