@@ -4,7 +4,7 @@ const path = require('path');
 
 const rustDir = 'rust';
 const repoOwner = 'pubky';
-const repoName = 'pubky-core-mobile-sdk';
+const repoName = 'pubky-core-ffi';
 const branch = 'main';
 const tempDir = 'temp';
 

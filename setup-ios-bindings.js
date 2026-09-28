@@ -19,7 +19,7 @@ const removeDirectories = () => {
 
 const setupIosCommand = `
   export IPHONEOS_DEPLOYMENT_TARGET=13.4
-  sed -i '' 's/crate_type = .*/crate_type = ["cdylib", "staticlib"]/' Cargo.toml && \\
+  sed -i '' 's/crate[-_]type = .*/crate-type = ["cdylib", "staticlib"]/' Cargo.toml && \\
   cargo build --release && \\
   cargo run --bin uniffi-bindgen generate --library ./target/release/libpubkycore.dylib --language swift --out-dir ./bindings && \\
   rustup target add aarch64-apple-ios-sim aarch64-apple-ios && \\

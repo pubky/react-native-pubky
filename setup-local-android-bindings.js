@@ -1,5 +1,6 @@
 const fs = require('fs').promises;
 const path = require('path');
+const { verifyAndroidPageSize } = require('./scripts/verify-android-page-size');
 
 const ktPath = 'rust/bindings/android/pubkycore.kt';
 const ktDestinationPath = 'android/src/main/java/uniffi/pubkycore/';
@@ -31,6 +32,7 @@ async function runSetup() {
     // Copy JNI libraries directory
     await fs.cp(jniPath, jniDestinationPath, { recursive: true });
 
+    verifyAndroidPageSize();
     console.log('Android files copied successfully!');
   } catch (error) {
     console.error('Error during setup:', error);

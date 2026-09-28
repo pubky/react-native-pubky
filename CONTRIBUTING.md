@@ -50,7 +50,13 @@ Make sure your code passes TypeScript and ESLint. Run the following to verify:
 ```sh
 yarn typecheck
 yarn lint
+yarn verify:android-page-size
 ```
+
+The Android check inspects every bundled 64-bit `.so` and fails when an ELF
+`LOAD` segment is aligned below `0x4000`. It also runs automatically before the
+npm package is packed or published, preventing a 4 KB-only native library from
+being released.
 
 To fix formatting errors, run the following:
 
