@@ -13,7 +13,12 @@ class Pubky: RCTEventEmitter {
     }
 
     override func supportedEvents() -> [String]! {
-        return ["PubkyEvent"]
+        return [
+            "PubkyEvent",
+            "PubkyStorageEvent",
+            "PubkyStorageEventError",
+            "PubkyStorageEventComplete",
+        ]
     }
 
     class EventListenerImpl: EventListener {
@@ -49,6 +54,22 @@ class Pubky: RCTEventEmitter {
                 resolve(result)
             } catch {
                 reject("auth Error", "Failed to auth", error)
+            }
+        }
+    }
+
+    @objc(authWithCapabilities:secretKey:approvedCapabilities:withResolver:withRejecter:)
+    func authWithCapabilities(_ url: String, secretKey: String, approvedCapabilities: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        Task {
+            do {
+                let result = try await react_native_pubky.authWithCapabilities(
+                    url: url,
+                    secretKey: secretKey,
+                    approvedCapabilities: approvedCapabilities
+                )
+                resolve(result)
+            } catch {
+                reject("authWithCapabilities Error", "Failed to authorize selected capabilities", error)
             }
         }
     }
