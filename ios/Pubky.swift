@@ -205,6 +205,30 @@ class Pubky: RCTEventEmitter {
         }
     }
 
+    @objc(listGrants:withResolver:withRejecter:)
+    func listGrants(_ sessionSecret: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        Task {
+            do {
+                let result = try await react_native_pubky.listGrants(sessionSecret: sessionSecret)
+                resolve(result)
+            } catch {
+                reject("listGrants Error", "Failed to list grants", error)
+            }
+        }
+    }
+
+    @objc(revokeGrant:grantId:withResolver:withRejecter:)
+    func revokeGrant(_ sessionSecret: String, grantId: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        Task {
+            do {
+                let result = try await react_native_pubky.revokeGrant(sessionSecret: sessionSecret, grantId: grantId)
+                resolve(result)
+            } catch {
+                reject("revokeGrant Error", "Failed to revoke grant", error)
+            }
+        }
+    }
+
     @objc(revalidateSession:withResolver:withRejecter:)
     func revalidateSession(_ sessionSecret: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
         Task {

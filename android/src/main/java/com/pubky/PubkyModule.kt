@@ -339,6 +339,44 @@ class PubkyModule(reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
+    fun listGrants(sessionSecret: String, promise: Promise) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val result = listGrants(sessionSecret)
+                val array = Arguments.createArray().apply {
+                    result.forEach { pushString(it) }
+                }
+                withContext(Dispatchers.Main) {
+                    promise.resolve(array)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    promise.reject("Error", e.message)
+                }
+            }
+        }
+    }
+
+    @ReactMethod
+    fun revokeGrant(sessionSecret: String, grantId: String, promise: Promise) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val result = revokeGrant(sessionSecret, grantId)
+                val array = Arguments.createArray().apply {
+                    result.forEach { pushString(it) }
+                }
+                withContext(Dispatchers.Main) {
+                    promise.resolve(array)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    promise.reject("Error", e.message)
+                }
+            }
+        }
+    }
+
+    @ReactMethod
     fun revalidateSession(sessionSecret: String, promise: Promise) {
         CoroutineScope(Dispatchers.IO).launch {
             try {

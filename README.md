@@ -23,6 +23,7 @@ npm install @synonymdev/react-native-pubky
 - [x] [signIn](#signIn): Grant sign-in to a homeserver.
 - [x] signInGrant / signInCookie: Explicit Grant and legacy cookie sign-in methods.
 - [x] [signOut](#signOut): Sign-out from a homeserver.
+- [x] listGrants / revokeGrant: List and revoke account grants using a root-capability session.
 - [x] [put](#put): Upload a small payload to a given path.
 - [x] [get](#get): Download a small payload from a given path relative to a pubky author.
 - [x] [list](#list): Returns a list of Pubky URLs of the files in the path of the `url` provided.

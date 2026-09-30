@@ -365,6 +365,37 @@ export async function signOut(sessionSecret: string): Promise<Result<string>> {
   }
 }
 
+export async function listGrants(
+  sessionSecret: string
+): Promise<Result<GrantInfo[]>> {
+  try {
+    const res = await Pubky.listGrants(sessionSecret);
+    const errorMessage = nativeResultError(res);
+    if (errorMessage) {
+      return err(errorMessage);
+    }
+    return ok(JSON.parse(res[1]));
+  } catch (e) {
+    return err(nativeErrorMessage(e));
+  }
+}
+
+export async function revokeGrant(
+  sessionSecret: string,
+  grantId: string
+): Promise<Result<string>> {
+  try {
+    const res = await Pubky.revokeGrant(sessionSecret, grantId);
+    const errorMessage = nativeResultError(res);
+    if (errorMessage) {
+      return err(errorMessage);
+    }
+    return ok(res[1]);
+  } catch (e) {
+    return err(nativeErrorMessage(e));
+  }
+}
+
 export async function revalidateSession(
   sessionSecret: string
 ): Promise<Result<SessionInfo | CookieSessionInfo>> {
@@ -498,8 +529,14 @@ export async function deleteFile(
 }
 
 export interface GrantSessionInfo {
+  homeserver: string;
   pubky: string;
+  client_id: string;
   capabilities: string[];
+  grant_id: string;
+  token_expires_at: number;
+  grant_expires_at: number;
+  created_at: number;
   grant_secret: string;
 }
 
@@ -510,6 +547,14 @@ export interface CookieSessionInfo {
 }
 
 export type SessionInfo = GrantSessionInfo;
+
+export interface GrantInfo {
+  grant_id: string;
+  client_id: string;
+  capabilities: string;
+  issued_at: number;
+  expires_at: number;
+}
 
 export interface IPublicKeyInfo {
   public_key: string;

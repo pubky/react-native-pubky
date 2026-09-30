@@ -86,6 +86,15 @@ RCT_EXTERN_METHOD(signOut:(NSString *)secretKey
                   withResolver:(RCTPromiseResolveBlock)resolve
                   withRejecter:(RCTPromiseRejectBlock)reject)
 
+RCT_EXTERN_METHOD(listGrants:(NSString *)sessionSecret
+                  withResolver:(RCTPromiseResolveBlock)resolve
+                  withRejecter:(RCTPromiseRejectBlock)reject)
+
+RCT_EXTERN_METHOD(revokeGrant:(NSString *)sessionSecret
+                  grantId:(NSString *)grantId
+                  withResolver:(RCTPromiseResolveBlock)resolve
+                  withRejecter:(RCTPromiseRejectBlock)reject)
+
 RCT_EXTERN_METHOD(put:(NSString *)url
                   content:(NSString *)content
                   secretKey:(NSString *)secretKey

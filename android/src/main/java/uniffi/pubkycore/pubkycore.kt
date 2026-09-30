@@ -422,6 +422,8 @@ internal interface _UniFFILib : Library {
     ): RustBuffer.ByValue
     fun uniffi_pubkycore_fn_func_list(`url`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus,
     ): RustBuffer.ByValue
+    fun uniffi_pubkycore_fn_func_list_grants(`sessionSecret`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus,
+    ): RustBuffer.ByValue
     fun uniffi_pubkycore_fn_func_mnemonic_phrase_to_keypair(`mnemonicPhrase`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus,
     ): RustBuffer.ByValue
     fun uniffi_pubkycore_fn_func_parse_auth_url(`url`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus,
@@ -445,6 +447,8 @@ internal interface _UniFFILib : Library {
     fun uniffi_pubkycore_fn_func_resolve_https(`publicKey`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus,
     ): RustBuffer.ByValue
     fun uniffi_pubkycore_fn_func_revalidate_session(`sessionSecret`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus,
+    ): RustBuffer.ByValue
+    fun uniffi_pubkycore_fn_func_revoke_grant(`sessionSecret`: RustBuffer.ByValue,`grantId`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus,
     ): RustBuffer.ByValue
     fun uniffi_pubkycore_fn_func_set_event_listener(`listener`: Long,_uniffi_out_err: RustCallStatus,
     ): Unit
@@ -618,6 +622,8 @@ internal interface _UniFFILib : Library {
     ): Short
     fun uniffi_pubkycore_checksum_func_list(
     ): Short
+    fun uniffi_pubkycore_checksum_func_list_grants(
+    ): Short
     fun uniffi_pubkycore_checksum_func_mnemonic_phrase_to_keypair(
     ): Short
     fun uniffi_pubkycore_checksum_func_parse_auth_url(
@@ -641,6 +647,8 @@ internal interface _UniFFILib : Library {
     fun uniffi_pubkycore_checksum_func_resolve_https(
     ): Short
     fun uniffi_pubkycore_checksum_func_revalidate_session(
+    ): Short
+    fun uniffi_pubkycore_checksum_func_revoke_grant(
     ): Short
     fun uniffi_pubkycore_checksum_func_set_event_listener(
     ): Short
@@ -735,6 +743,9 @@ private fun uniffiCheckApiChecksums(lib: _UniFFILib) {
     if (lib.uniffi_pubkycore_checksum_func_list() != 43198.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_pubkycore_checksum_func_list_grants() != 59792.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_pubkycore_checksum_func_mnemonic_phrase_to_keypair() != 45784.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -769,6 +780,9 @@ private fun uniffiCheckApiChecksums(lib: _UniFFILib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_pubkycore_checksum_func_revalidate_session() != 57726.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_pubkycore_checksum_func_revoke_grant() != 15677.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_pubkycore_checksum_func_set_event_listener() != 60071.toShort()) {
@@ -1454,6 +1468,14 @@ fun `list`(`url`: String): List<String> {
 }
 
 
+fun `listGrants`(`sessionSecret`: String): List<String> {
+    return FfiConverterSequenceString.lift(
+    rustCall() { _status ->
+    _UniFFILib.INSTANCE.uniffi_pubkycore_fn_func_list_grants(FfiConverterString.lower(`sessionSecret`),_status)
+})
+}
+
+
 fun `mnemonicPhraseToKeypair`(`mnemonicPhrase`: String): List<String> {
     return FfiConverterSequenceString.lift(
     rustCall() { _status ->
@@ -1546,6 +1568,14 @@ fun `revalidateSession`(`sessionSecret`: String): List<String> {
     return FfiConverterSequenceString.lift(
     rustCall() { _status ->
     _UniFFILib.INSTANCE.uniffi_pubkycore_fn_func_revalidate_session(FfiConverterString.lower(`sessionSecret`),_status)
+})
+}
+
+
+fun `revokeGrant`(`sessionSecret`: String, `grantId`: String): List<String> {
+    return FfiConverterSequenceString.lift(
+    rustCall() { _status ->
+    _UniFFILib.INSTANCE.uniffi_pubkycore_fn_func_revoke_grant(FfiConverterString.lower(`sessionSecret`),FfiConverterString.lower(`grantId`),_status)
 })
 }
 
