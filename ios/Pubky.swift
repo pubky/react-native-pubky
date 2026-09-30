@@ -13,7 +13,12 @@ class Pubky: RCTEventEmitter {
     }
 
     override func supportedEvents() -> [String]! {
-        return ["PubkyEvent"]
+        return [
+            "PubkyEvent",
+            "PubkyStorageEvent",
+            "PubkyStorageEventError",
+            "PubkyStorageEventComplete",
+        ]
     }
 
     class EventListenerImpl: EventListener {

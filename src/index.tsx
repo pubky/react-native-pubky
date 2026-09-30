@@ -44,6 +44,90 @@ const nativeResultError = (res: unknown): string | null => {
 const optionalString = (value: string | undefined): string | undefined =>
   value === '' ? undefined : value;
 
+export type PubkyErrorKind =
+  | 'transport'
+  | 'server'
+  | 'validation'
+  | 'decodeJson'
+  | 'pkarr'
+  | 'parse'
+  | 'authentication'
+  | 'build'
+  | 'state'
+  | 'unknown';
+
+export class PubkyError extends Error {
+  readonly kind: PubkyErrorKind;
+  readonly operation?: string;
+  readonly status?: number;
+  readonly retryable?: boolean;
+  readonly expired?: boolean;
+  readonly nativeCode?: string;
+
+  constructor(
+    message: string,
+    details: {
+      kind?: PubkyErrorKind;
+      operation?: string;
+      status?: number;
+      retryable?: boolean;
+      expired?: boolean;
+      nativeCode?: string;
+    } = {}
+  ) {
+    super(message);
+    this.name = 'PubkyError';
+    this.kind = details.kind ?? 'unknown';
+    this.operation = details.operation;
+    this.status = details.status;
+    this.retryable = details.retryable;
+    this.expired = details.expired;
+    this.nativeCode = details.nativeCode;
+  }
+}
+
+const nativePubkyError = (error: unknown, operation: string): PubkyError => {
+  const nativeCode =
+    typeof error === 'object' && error !== null && 'code' in error
+      ? String((error as { code?: unknown }).code ?? '')
+      : undefined;
+  const rawMessage = nativeErrorMessage(error);
+  const jsonStart = rawMessage.indexOf('{');
+
+  if (jsonStart >= 0) {
+    try {
+      const details = JSON.parse(rawMessage.slice(jsonStart)) as {
+        kind?: PubkyErrorKind;
+        operation?: string;
+        message?: string;
+        status?: number;
+        retryable?: boolean;
+        expired?: boolean;
+      };
+      return new PubkyError(details.message ?? rawMessage, {
+        ...details,
+        operation: details.operation ?? operation,
+        nativeCode,
+      });
+    } catch {
+      // Fall through to the native message if the bridge did not carry JSON.
+    }
+  }
+
+  return new PubkyError(rawMessage, { operation, nativeCode });
+};
+
+const typedResult = async <T,>(
+  operation: string,
+  call: () => Promise<T>
+): Promise<Result<T>> => {
+  try {
+    return ok(await call());
+  } catch (error) {
+    return err(nativePubkyError(error, operation));
+  }
+};
+
 export async function setEventListener(
   callback: (eventData: string) => void
 ): Promise<Result<void>> {
@@ -65,7 +149,7 @@ export async function setEventListener(
 
 export async function removeEventListener(): Promise<Result<void>> {
   try {
-    //await Pubky.removeEventListener();
+    await Pubky.removeEventListener();
     eventEmitter.removeAllListeners('PubkyEvent');
     return ok(undefined);
   } catch (e) {
@@ -801,4 +885,424 @@ export async function deleteWithSession(
   } catch (e) {
     return err(nativeErrorMessage(e));
   }
+}
+
+/** Raw bytes cross the React Native bridge as standard padded base64. */
+export type Base64Data = string;
+/** UInt64 values are returned as decimal strings to avoid JavaScript precision loss. */
+export type UInt64String = string;
+
+export interface PubkyClientConfig {
+  useTestnet?: boolean;
+  testnetHost?: string;
+  requestTimeoutMs?: number;
+  readTimeoutMs?: number;
+  poolMaxIdlePerHost?: number;
+  maxErrorBodyBytes?: number;
+  userAgentExtra?: string;
+}
+
+export interface StorageListOptions {
+  reverse?: boolean;
+  shallow?: boolean;
+  limit?: number;
+  cursor?: string;
+}
+
+export interface StorageListPage {
+  entries: string[];
+  nextCursor?: string;
+}
+
+export interface StorageResourceStats {
+  contentLength?: UInt64String;
+  contentType?: string;
+  lastModifiedMs?: UInt64String;
+  etag?: string;
+}
+
+export interface GrantAuthFlowConfig {
+  capabilities: string;
+  clientId: string;
+  /** Presence selects signup; absence selects signin. */
+  homeserver?: string;
+  signupToken?: string;
+  relay?: string;
+  /** Exactly 32 bytes encoded as base64. */
+  clientSecret?: Base64Data;
+  /** Exactly 32 bytes encoded as base64. */
+  clientKeySecret?: Base64Data;
+  xSource?: string;
+  xSuccess?: string;
+  xError?: string;
+  xCancel?: string;
+}
+
+export interface GrantAuthFlowState {
+  authorizationUrl: string;
+  /** Sensitive proof-of-possession key material encoded as base64. */
+  clientKeySecret: Base64Data;
+}
+
+export interface EventStreamUser {
+  publicKey: string;
+  cursor?: UInt64String | number;
+}
+
+export interface EventStreamConfig {
+  users: EventStreamUser[];
+  homeserver?: string;
+  paths?: string[];
+  limit?: number;
+  maxEventBytes?: number;
+  live?: boolean;
+  reverse?: boolean;
+  /** Required when any path selects `/priv/...`. */
+  sessionSecret?: string;
+}
+
+export interface PubkyStorageEvent {
+  eventType: 'PUT' | 'DEL' | string;
+  resource: string;
+  cursor: UInt64String;
+  contentHash?: string;
+}
+
+export interface StorageLockInfo {
+  id: string;
+  path: string;
+  token: string;
+  timeoutSeconds: UInt64String;
+}
+
+const parseNativeJson = <T,>(value: string): T => JSON.parse(value) as T;
+
+export async function configureClient(
+  config: PubkyClientConfig
+): Promise<Result<void>> {
+  return typedResult('configureClient', async () => {
+    await Pubky.configureClient(
+      JSON.stringify({ useTestnet: false, ...config })
+    );
+  });
+}
+
+/**
+ * Rebuild the shared native client for the selected Pubky network.
+ * Prefer `configureClient` when timeout or transport settings are also needed.
+ */
+export async function switchNetwork(
+  useTestnet: boolean
+): Promise<Result<string[]>> {
+  return typedResult('switchNetwork', () => Pubky.switchNetwork(useTestnet));
+}
+
+export async function publicGetBytes(
+  address: string
+): Promise<Result<Base64Data>> {
+  return typedResult('publicGetBytes', () => Pubky.publicGetBytes(address));
+}
+
+export async function publicExists(address: string): Promise<Result<boolean>> {
+  return typedResult('publicExists', () => Pubky.publicExists(address));
+}
+
+export async function publicStats(
+  address: string
+): Promise<Result<StorageResourceStats | null>> {
+  return typedResult('publicStats', async () => {
+    const value = await Pubky.publicStats(address);
+    return value == null ? null : parseNativeJson<StorageResourceStats>(value);
+  });
+}
+
+export async function publicList(
+  address: string,
+  options: StorageListOptions = {}
+): Promise<Result<StorageListPage>> {
+  return typedResult('publicList', async () =>
+    parseNativeJson<StorageListPage>(
+      await Pubky.publicList(address, JSON.stringify(options))
+    )
+  );
+}
+
+export async function sessionGetBytes(
+  pathOrAddress: string,
+  sessionSecret: string
+): Promise<Result<Base64Data>> {
+  return typedResult('sessionGetBytes', () =>
+    Pubky.sessionGetBytes(pathOrAddress, sessionSecret)
+  );
+}
+
+export async function sessionExists(
+  pathOrAddress: string,
+  sessionSecret: string
+): Promise<Result<boolean>> {
+  return typedResult('sessionExists', () =>
+    Pubky.sessionExists(pathOrAddress, sessionSecret)
+  );
+}
+
+export async function sessionStats(
+  pathOrAddress: string,
+  sessionSecret: string
+): Promise<Result<StorageResourceStats | null>> {
+  return typedResult('sessionStats', async () => {
+    const value = await Pubky.sessionStats(pathOrAddress, sessionSecret);
+    return value == null ? null : parseNativeJson<StorageResourceStats>(value);
+  });
+}
+
+export async function sessionList(
+  pathOrAddress: string,
+  sessionSecret: string,
+  options: StorageListOptions = {}
+): Promise<Result<StorageListPage>> {
+  return typedResult('sessionList', async () =>
+    parseNativeJson<StorageListPage>(
+      await Pubky.sessionList(
+        pathOrAddress,
+        sessionSecret,
+        JSON.stringify(options)
+      )
+    )
+  );
+}
+
+export async function sessionPutBytes(
+  pathOrAddress: string,
+  content: Base64Data,
+  sessionSecret: string
+): Promise<Result<void>> {
+  return typedResult('sessionPutBytes', async () => {
+    await Pubky.sessionPutBytes(pathOrAddress, content, sessionSecret);
+  });
+}
+
+export async function sessionDelete(
+  pathOrAddress: string,
+  sessionSecret: string
+): Promise<Result<void>> {
+  return typedResult('sessionDelete', async () => {
+    await Pubky.sessionDelete(pathOrAddress, sessionSecret);
+  });
+}
+
+export async function startGrantAuthFlowWithConfig(
+  config: GrantAuthFlowConfig
+): Promise<Result<GrantAuthFlowState>> {
+  return typedResult('startGrantAuthFlowWithConfig', async () =>
+    parseNativeJson<GrantAuthFlowState>(
+      await Pubky.startGrantAuthFlowWithConfig(JSON.stringify(config))
+    )
+  );
+}
+
+export async function saveGrantAuthFlow(): Promise<Result<GrantAuthFlowState>> {
+  return typedResult('saveGrantAuthFlow', async () =>
+    parseNativeJson<GrantAuthFlowState>(await Pubky.saveGrantAuthFlow())
+  );
+}
+
+export async function restoreGrantAuthFlow(
+  state: GrantAuthFlowState
+): Promise<Result<string>> {
+  return typedResult('restoreGrantAuthFlow', () =>
+    Pubky.restoreGrantAuthFlow(JSON.stringify(state))
+  );
+}
+
+export async function pollGrantAuthFlow(): Promise<
+  Result<GrantSessionInfo | null>
+> {
+  return typedResult('pollGrantAuthFlow', async () => {
+    const value = await Pubky.pollGrantAuthFlow();
+    return value == null ? null : parseNativeJson<GrantSessionInfo>(value);
+  });
+}
+
+export async function awaitGrantAuthFlow(): Promise<Result<GrantSessionInfo>> {
+  return typedResult('awaitGrantAuthFlow', async () =>
+    parseNativeJson<GrantSessionInfo>(await Pubky.awaitGrantAuthFlow())
+  );
+}
+
+export async function cancelGrantAuthFlow(): Promise<Result<void>> {
+  return typedResult('cancelGrantAuthFlow', async () => {
+    await Pubky.cancelGrantAuthFlow();
+  });
+}
+
+export async function signInGrantBlocking(
+  secretKey: string,
+  clientId: string
+): Promise<Result<GrantSessionInfo>> {
+  return typedResult('signInGrantBlocking', async () =>
+    parseNativeJson<GrantSessionInfo>(
+      await Pubky.signInGrantBlocking(secretKey, clientId)
+    )
+  );
+}
+
+export async function signInCookieBlocking(
+  secretKey: string
+): Promise<Result<CookieSessionInfo>> {
+  return typedResult('signInCookieBlocking', async () =>
+    parseNativeJson<CookieSessionInfo>(
+      await Pubky.signInCookieBlocking(secretKey)
+    )
+  );
+}
+
+type NativeEventSubscription = { remove(): void };
+
+const storageEventSubscriptions = new Map<string, NativeEventSubscription[]>();
+let storageEventSequence = 0;
+
+const removeLocalStorageEventSubscription = (subscriptionId: string): void => {
+  storageEventSubscriptions
+    .get(subscriptionId)
+    ?.forEach((item) => item.remove());
+  storageEventSubscriptions.delete(subscriptionId);
+};
+
+export interface EventStreamCallbacks {
+  onEvent(event: PubkyStorageEvent): void;
+  onError?(error: PubkyError): void;
+  onComplete?(): void;
+}
+
+export interface EventStreamSubscription {
+  id: string;
+  remove(): Promise<Result<boolean>>;
+}
+
+export async function startEventStream(
+  config: EventStreamConfig,
+  callbacks: EventStreamCallbacks
+): Promise<Result<EventStreamSubscription>> {
+  const subscriptionId = `pubky-storage-${Date.now()}-${++storageEventSequence}`;
+
+  const subscriptions: NativeEventSubscription[] = [
+    eventEmitter.addListener(
+      'PubkyStorageEvent',
+      (body: { subscriptionId?: string; event?: PubkyStorageEvent }) => {
+        if (body.subscriptionId === subscriptionId && body.event) {
+          callbacks.onEvent(body.event);
+        }
+      }
+    ),
+    eventEmitter.addListener(
+      'PubkyStorageEventError',
+      (body: { subscriptionId?: string; message?: string }) => {
+        if (body.subscriptionId !== subscriptionId) return;
+        removeLocalStorageEventSubscription(subscriptionId);
+        callbacks.onError?.(
+          new PubkyError(body.message ?? 'Event stream failed', {
+            kind: 'transport',
+            operation: 'startEventStream',
+          })
+        );
+        Pubky.stopStorageEventStream(subscriptionId).catch(() => undefined);
+      }
+    ),
+    eventEmitter.addListener(
+      'PubkyStorageEventComplete',
+      (body: { subscriptionId?: string }) => {
+        if (body.subscriptionId !== subscriptionId) return;
+        removeLocalStorageEventSubscription(subscriptionId);
+        callbacks.onComplete?.();
+        Pubky.stopStorageEventStream(subscriptionId).catch(() => undefined);
+      }
+    ),
+  ];
+  storageEventSubscriptions.set(subscriptionId, subscriptions);
+
+  const started = await typedResult('startEventStream', async () => {
+    await Pubky.startStorageEventStream(
+      JSON.stringify({ paths: [], live: false, reverse: false, ...config }),
+      subscriptionId
+    );
+    return {
+      id: subscriptionId,
+      remove: () => stopEventStream(subscriptionId),
+    };
+  });
+
+  if (started.isErr()) {
+    removeLocalStorageEventSubscription(subscriptionId);
+  }
+  return started;
+}
+
+export async function stopEventStream(
+  subscriptionId: string
+): Promise<Result<boolean>> {
+  removeLocalStorageEventSubscription(subscriptionId);
+  return typedResult('stopEventStream', () =>
+    Pubky.stopStorageEventStream(subscriptionId)
+  );
+}
+
+export async function stopAllEventStreams(): Promise<Result<UInt64String>> {
+  [...storageEventSubscriptions.keys()].forEach(
+    removeLocalStorageEventSubscription
+  );
+  return typedResult('stopAllEventStreams', () =>
+    Pubky.stopAllStorageEventStreams()
+  );
+}
+
+export async function acquireStorageLock(
+  pathOrAddress: string,
+  sessionSecret: string,
+  timeoutSeconds: number
+): Promise<Result<StorageLockInfo>> {
+  return typedResult('acquireStorageLock', async () =>
+    parseNativeJson<StorageLockInfo>(
+      await Pubky.acquireStorageLock(
+        pathOrAddress,
+        sessionSecret,
+        timeoutSeconds
+      )
+    )
+  );
+}
+
+export async function refreshStorageLock(
+  lockId: string,
+  timeoutSeconds: number
+): Promise<Result<StorageLockInfo>> {
+  return typedResult('refreshStorageLock', async () =>
+    parseNativeJson<StorageLockInfo>(
+      await Pubky.refreshStorageLock(lockId, timeoutSeconds)
+    )
+  );
+}
+
+export async function putWithStorageLock(
+  lockId: string,
+  content: Base64Data
+): Promise<Result<void>> {
+  return typedResult('putWithStorageLock', async () => {
+    await Pubky.putWithStorageLock(lockId, content);
+  });
+}
+
+export async function deleteWithStorageLock(
+  lockId: string
+): Promise<Result<void>> {
+  return typedResult('deleteWithStorageLock', async () => {
+    await Pubky.deleteWithStorageLock(lockId);
+  });
+}
+
+export async function releaseStorageLock(
+  lockId: string
+): Promise<Result<void>> {
+  return typedResult('releaseStorageLock', async () => {
+    await Pubky.releaseStorageLock(lockId);
+  });
 }

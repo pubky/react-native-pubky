@@ -9,7 +9,9 @@ npm install @synonymdev/react-native-pubky
 ```
 
 ## Implementation Status
+
 ### Implemented Methods
+
 - [x] [auth](#auth): Authentication functionality.
 - [x] [parseAuthUrl](#parseAuthUrl): Method to decode an authUrl.
 - [x] [publish](#publish): Functionality to publish content.
@@ -39,11 +41,49 @@ npm install @synonymdev/react-native-pubky
 - [x] awaitGrantAuthApproval / awaitCookieAuthApproval: Await explicit Grant and legacy cookie auth flows.
 - [x] [putWithSession](#putWithSession): Upload content to a path using session-based authentication.
 - [x] [deleteWithSession](#deleteWithSession): Delete content at a path using session-based authentication.
+- [x] Client configuration and network switching: Configure testnet, request/read timeouts, pooling, error limits, and user-agent metadata.
+- [x] Binary storage APIs: Public and authenticated reads, writes, deletes, existence checks, metadata, and paginated listings.
+- [x] Configurable Grant flows: Sign-in/sign-up configuration, persistence, restoration, polling, cancellation, and blocking sign-in.
+- [x] Storage event streams: Subscribe to public or private PUT/DEL events and stop individual or all subscriptions.
+- [x] WebDAV storage locks: Acquire, refresh, write/delete with, and release authenticated locks.
+- [x] Typed Pubky errors: Inspect error kind, operation, HTTP status, retryability, and authentication expiry.
+
 ## Usage
 
 `signUp`, `signIn`, `startAuthFlow`, and `awaitAuthApproval` are Grant-auth aliases. Use the explicit `*Grant` names when the distinction matters. Legacy cookie auth is still exposed through the explicit `*Cookie` methods because the native binding mirrors upstream `pubky`, but cookie auth is deprecated upstream.
 
+### Pubky 0.14 client APIs
+
+The complete high-level Pubky 0.14 client surface is exposed on both Android and iOS:
+
+- `configureClient` and `switchNetwork` control the shared native client.
+- `publicGetBytes`, `publicExists`, `publicStats`, and `publicList` read public storage.
+- `sessionGetBytes`, `sessionExists`, `sessionStats`, `sessionList`, `sessionPutBytes`, and `sessionDelete` use either a Grant or legacy cookie session secret.
+- `startGrantAuthFlowWithConfig`, `saveGrantAuthFlow`, `restoreGrantAuthFlow`, `pollGrantAuthFlow`, `awaitGrantAuthFlow`, and `cancelGrantAuthFlow` support configurable and resumable Grant flows.
+- `signInGrantBlocking` and `signInCookieBlocking` provide blocking sign-in when that execution model is appropriate.
+- `startEventStream`, `stopEventStream`, and `stopAllEventStreams` manage live storage events.
+- `acquireStorageLock`, `refreshStorageLock`, `putWithStorageLock`, `deleteWithStorageLock`, and `releaseStorageLock` manage WebDAV locks.
+
+Binary values cross the React Native bridge as standard padded base64 strings. Unsigned 64-bit values are returned as decimal strings so JavaScript does not lose precision. New client APIs return `PubkyError` on failure; use its `kind`, `operation`, `status`, `retryable`, and `expired` fields for structured handling.
+
+```ts
+import {
+  publicGetBytes,
+  sessionPutBytes,
+  type Base64Data,
+} from '@synonymdev/react-native-pubky';
+
+const content: Base64Data = 'SGVsbG8=';
+await sessionPutBytes('/pub/example/message.txt', content, sessionSecret);
+
+const result = await publicGetBytes('pubky://user/pub/example/message.txt');
+if (result.isErr()) {
+  console.log(result.error.kind, result.error.status);
+}
+```
+
 ### <a name="auth"></a>Auth
+
 ```js
 import { auth } from '@synonymdev/react-native-pubky';
 
@@ -57,11 +97,14 @@ if (authRes.isErr()) {
 }
 console.log(authRes.value);
 ```
+
 ### <a name="parseAuthUrl"></a>parseAuthUrl
+
 ```js
 import { parseAuthUrl } from '@synonymdev/react-native-pubky';
 
-const pubkyAuthUrl = 'pubkyauth:///?relay=https://demo.httprelay.io/link&capabilities=/pub/pubky.app/:rw,/pub/example.com/nested/:rw&secret=FyzJ3gJ1W7boyFZC1Do9fYrRmDNgCLNRwEu_gaBgPUA';
+const pubkyAuthUrl =
+  'pubkyauth:///?relay=https://demo.httprelay.io/link&capabilities=/pub/pubky.app/:rw,/pub/example.com/nested/:rw&secret=FyzJ3gJ1W7boyFZC1Do9fYrRmDNgCLNRwEu_gaBgPUA';
 const parseRes = await parseAuthUrl(pubkyAuthUrl);
 if (parseRes.isErr()) {
   console.log(parseRes.error.message);
@@ -69,7 +112,9 @@ if (parseRes.isErr()) {
 }
 console.log(parseRes.value);
 ```
+
 ### <a name="publish"></a>publish
+
 ```js
 import { publish } from '@synonymdev/react-native-pubky';
 
@@ -84,7 +129,9 @@ if (publishRes.isErr()) {
 }
 console.log(publishRes.value);
 ```
+
 ### <a name="resolve"></a>resolve
+
 ```js
 import { resolve } from '@synonymdev/react-native-pubky';
 
@@ -99,6 +146,7 @@ console.log(resolveRes.value);
 ```
 
 ### <a name="publishHttps"></a>publishHttps
+
 ```js
 import { publishHttps } from '@synonymdev/react-native-pubky';
 
@@ -115,6 +163,7 @@ console.log(publishHttpsRes.value);
 ```
 
 ### <a name="resolveHttps"></a>resolveHttps
+
 ```js
 import { resolveHttps } from '@synonymdev/react-native-pubky';
 
@@ -129,6 +178,7 @@ console.log(resolveHttpsRes.value);
 ```
 
 ### <a name="put"></a>put
+
 ```js
 import { put } from '@synonymdev/react-native-pubky';
 
@@ -146,6 +196,7 @@ console.log(putRes.value);
 ```
 
 ### <a name="get"></a>get
+
 ```js
 import { get } from '@synonymdev/react-native-pubky';
 
@@ -160,6 +211,7 @@ console.log(getRes.value);
 ```
 
 ### <a name="list"></a>list
+
 ```js
 import { list } from '@synonymdev/react-native-pubky';
 
@@ -174,6 +226,7 @@ console.log(listRes.value);
 ```
 
 ### <a name="deleteFile"></a>deleteFile
+
 ```js
 import { deleteFile } from '@synonymdev/react-native-pubky';
 
@@ -190,6 +243,7 @@ console.log(deleteFileRes.value);
 ```
 
 ### <a name="generateSecretKey"></a>generateSecretKey
+
 ```js
 import { generateSecretKey } from '@synonymdev/react-native-pubky';
 
@@ -202,10 +256,13 @@ console.log(generateSecretKeyRes.value);
 ```
 
 ### <a name="getPublicKeyFromSecretKey"></a>getPublicKeyFromSecretKey
+
 ```js
 import { getPublicKeyFromSecretKey } from '@synonymdev/react-native-pubky';
 
-const getPublicKeyFromSecretKeyRes = await getPublicKeyFromSecretKey('e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855');
+const getPublicKeyFromSecretKeyRes = await getPublicKeyFromSecretKey(
+  'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
+);
 if (getPublicKeyFromSecretKeyRes.isErr()) {
   console.log(getPublicKeyFromSecretKeyRes.error.message);
   return;
@@ -214,6 +271,7 @@ console.log(getPublicKeyFromSecretKeyRes.value);
 ```
 
 ### <a name="getSignupToken"></a>getSignupToken
+
 ```js
 import { getSignupToken } from '@synonymdev/react-native-pubky';
 
@@ -229,6 +287,7 @@ console.log('Signup Token:', getSignupTokenRes.value);
 ```
 
 ### <a name="signUp"></a>signUp
+
 ```js
 import { signUp, signUpCookie } from '@synonymdev/react-native-pubky';
 
@@ -271,6 +330,7 @@ console.log(cookieSignUpRes.value); // { pubky, capabilities, session_secret }
 ```
 
 ### <a name="republishHomeserver"></a>republishHomeserver
+
 ```js
 import { republishHomeserver } from '@synonymdev/react-native-pubky';
 
@@ -286,6 +346,7 @@ console.log(republishRes.value); // "Homeserver republished successfully"
 ```
 
 ### <a name="signIn"></a>signIn
+
 ```js
 import { signIn, signInCookie } from '@synonymdev/react-native-pubky';
 
@@ -310,6 +371,7 @@ console.log(cookieSignInRes.value); // { pubky, capabilities, session_secret }
 ```
 
 ### <a name="getHomeserver"></a>getHomeserver
+
 ```js
 import { getHomeserver } from '@synonymdev/react-native-pubky';
 
@@ -324,6 +386,7 @@ console.log(getHomeserverRes.value);
 ```
 
 ### <a name="signOut"></a>signOut
+
 ```js
 import { signOut } from '@synonymdev/react-native-pubky';
 
@@ -338,7 +401,9 @@ console.log(signOutRes.value);
 ```
 
 ### <a name="listGrants"></a>listGrants
+
 List the grants authorized for an account using a root-capability session. Each entry contains the grant ID needed by `revokeGrant`.
+
 ```js
 import { listGrants } from '@synonymdev/react-native-pubky';
 
@@ -360,7 +425,9 @@ console.log(grantsRes.value);
 ```
 
 ### <a name="revokeGrant"></a>revokeGrant
+
 Revoke a grant by passing a `grant_id` returned by `listGrants`. A Grant session also exposes its own ID as `GrantSessionInfo.grant_id`; exclude that ID when presenting revocable grants so the caller does not revoke its management session.
+
 ```js
 import { listGrants, revokeGrant } from '@synonymdev/react-native-pubky';
 
@@ -372,7 +439,7 @@ async function revokeAnotherGrant(managementSession) {
   }
 
   const grantToRevoke = grantsRes.value.find(
-    grant => grant.grant_id !== managementSession.grant_id
+    (grant) => grant.grant_id !== managementSession.grant_id
   );
 
   if (!grantToRevoke) {
@@ -392,12 +459,13 @@ async function revokeAnotherGrant(managementSession) {
 ```
 
 ### <a name="createRecoveryFile"></a>createRecoveryFile
+
 ```js
 import { createRecoveryFile } from '@synonymdev/react-native-pubky';
 
 const createRecoveryFileRes = await createRecoveryFile(
   'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', // Secret Key
-  'passphrase', // Passphrase
+  'passphrase' // Passphrase
 );
 if (createRecoveryFileRes.isErr()) {
   console.log(createRecoveryFileRes.error.message);
@@ -407,12 +475,13 @@ console.log(createRecoveryFileRes.value);
 ```
 
 ### <a name="decryptRecoveryFile"></a>decryptRecoveryFile
+
 ```js
 import { decryptRecoveryFile } from '@synonymdev/react-native-pubky';
 
 const decryptRecoveryFileRes = await decryptRecoveryFile(
   'cHVia3kub3JnL3JlY292ZXJ5CkZRt1NHIjxyTo0whSSgTgNrH56MPpGrSxvAQSE0x5FeklVJpNJqcNP4zjdwW/OpdBOsEC1qZ5MI/mcEUKFKVAEZwikdclsLZg==', // Recovery File
-  'passphrase', // Passphrase
+  'passphrase' // Passphrase
 );
 if (decryptRecoveryFileRes.isErr()) {
   console.log(decryptRecoveryFileRes.error.message);
@@ -422,9 +491,14 @@ console.log(decryptRecoveryFileRes.value);
 ```
 
 ### <a name="startAuthFlow"></a>startAuthFlow
+
 Start a Grant authentication flow with requested capabilities. Returns a URL to present to the user for approval.
+
 ```js
-import { startAuthFlow, startCookieAuthFlow } from '@synonymdev/react-native-pubky';
+import {
+  startAuthFlow,
+  startCookieAuthFlow,
+} from '@synonymdev/react-native-pubky';
 
 const startRes = await startAuthFlow('/pub/att.app/:rw', 'my-app.example');
 if (startRes.isErr()) {
@@ -442,9 +516,14 @@ console.log(cookieStartRes.value); // Legacy cookie auth URL
 ```
 
 ### <a name="awaitAuthApproval"></a>awaitAuthApproval
+
 Await approval of a pending Ring auth flow. Returns session info upon approval.
+
 ```js
-import { awaitAuthApproval, awaitCookieAuthApproval } from '@synonymdev/react-native-pubky';
+import {
+  awaitAuthApproval,
+  awaitCookieAuthApproval,
+} from '@synonymdev/react-native-pubky';
 
 const approvalRes = await awaitAuthApproval();
 if (approvalRes.isErr()) {
@@ -473,7 +552,9 @@ console.log(cookieApprovalRes.value); // { pubky, capabilities, session_secret }
 ```
 
 ### <a name="putWithSession"></a>putWithSession
+
 Upload content to a path using session-based authentication (instead of a secret key).
+
 ```js
 import { putWithSession } from '@synonymdev/react-native-pubky';
 
@@ -490,7 +571,9 @@ console.log(putRes.value);
 ```
 
 ### <a name="deleteWithSession"></a>deleteWithSession
+
 Delete content at a path using session-based authentication (instead of a secret key).
+
 ```js
 import { deleteWithSession } from '@synonymdev/react-native-pubky';
 
@@ -508,21 +591,28 @@ console.log(deleteRes.value);
 ## Local Installation
 
 1. Clone & npm install:
+
 ```sh
 git clone git@github.com:pubky/react-native-pubky.git && cd react-native-pubky && npm i
 ```
+
 2. Delete the `rust/pubky` directory to prevent a memory error (This step will be removed once pubky is public).
 3. Yarn add it to your project:
+
 ```sh
 yarn add path/to/react-native-pubky
 ```
 
 ## Run React Native Example App
+
 1. Run Homeserver:
+
 ```sh
 cd rust/pubky/pubky-homeserver && cargo run -- --config=./src/config.toml
 ```
+
 2. Run the React Native Example App:
+
 ```sh
 cd example && yarn install && cd ios && pod install && cd ../ && yarn ios
 ```

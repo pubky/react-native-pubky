@@ -11,9 +11,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import uniffi.pubkycore.*
+import android.util.Base64
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 class PubkyModule(reactContext: ReactApplicationContext) :
     ReactContextBaseJavaModule(reactContext) {
+
+    private val storageLocks = ConcurrentHashMap<String, PubkyStorageLock>()
+    private val eventStreams = ConcurrentHashMap<String, String>()
 
     init {
         // Initialize rustls-platform-verifier with the app Context before any TLS call.
@@ -30,6 +36,63 @@ class PubkyModule(reactContext: ReactApplicationContext) :
             reactContext
                 .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
                 .emit("PubkyEvent", eventData)
+        }
+    }
+
+    private fun runBinding(operation: String, promise: Promise, block: () -> Any?) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val result = block()
+                withContext(Dispatchers.Main) { promise.resolve(result) }
+            } catch (error: Throwable) {
+                withContext(Dispatchers.Main) { PubkyBridge.reject(error, operation, promise) }
+            }
+        }
+    }
+
+    private fun unsigned(value: Double, field: String): ULong {
+        require(value.isFinite() && value >= 0 && value % 1.0 == 0.0) {
+            "$field must be an unsigned integer"
+        }
+        return value.toULong()
+    }
+
+    private inner class StorageEventListener(
+        private val subscriptionId: String,
+    ) : PubkyEventStreamListener {
+        override fun onEvent(event: PubkyStorageEvent) {
+            val eventValue = Arguments.createMap().apply {
+                putString("eventType", event.eventType)
+                putString("resource", event.resource)
+                putString("cursor", event.cursor.toString())
+                event.contentHash?.let { putString("contentHash", it) } ?: putNull("contentHash")
+            }
+            val body = Arguments.createMap().apply {
+                putString("subscriptionId", subscriptionId)
+                putMap("event", eventValue)
+            }
+            reactApplicationContext
+                .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+                .emit("PubkyStorageEvent", body)
+        }
+
+        override fun onError(message: String) {
+            val body = Arguments.createMap().apply {
+                putString("subscriptionId", subscriptionId)
+                putString("message", message)
+            }
+            reactApplicationContext
+                .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+                .emit("PubkyStorageEventError", body)
+        }
+
+        override fun onComplete() {
+            val body = Arguments.createMap().apply {
+                putString("subscriptionId", subscriptionId)
+            }
+            reactApplicationContext
+                .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+                .emit("PubkyStorageEventComplete", body)
         }
     }
 
@@ -812,6 +875,240 @@ class PubkyModule(reactContext: ReactApplicationContext) :
             }
         }
     }
+
+    @ReactMethod
+    fun configureClient(configJson: String, promise: Promise) =
+        runBinding("configureClient", promise) {
+            uniffi.pubkycore.configureClient(PubkyBridge.clientConfig(configJson))
+            null
+        }
+
+    @ReactMethod
+    fun switchNetwork(useTestnet: Boolean, promise: Promise) =
+        runBinding("switchNetwork", promise) {
+            Arguments.createArray().apply {
+                uniffi.pubkycore.switchNetwork(useTestnet).forEach { pushString(it) }
+            }
+        }
+
+    @ReactMethod
+    fun publicGetBytes(address: String, promise: Promise) =
+        runBinding("publicGetBytes", promise) {
+            Base64.encodeToString(uniffi.pubkycore.publicGetBytes(address), Base64.NO_WRAP)
+        }
+
+    @ReactMethod
+    fun publicExists(address: String, promise: Promise) =
+        runBinding("publicExists", promise) {
+            uniffi.pubkycore.publicExists(address)
+        }
+
+    @ReactMethod
+    fun publicStats(address: String, promise: Promise) =
+        runBinding("publicStats", promise) {
+            PubkyBridge.stats(uniffi.pubkycore.publicStats(address))
+        }
+
+    @ReactMethod
+    fun publicList(address: String, options: String, promise: Promise) =
+        runBinding("publicList", promise) {
+            PubkyBridge.listPage(
+                uniffi.pubkycore.publicList(address, PubkyBridge.listOptions(options)),
+            )
+        }
+
+    @ReactMethod
+    fun sessionGetBytes(pathOrAddress: String, sessionSecret: String, promise: Promise) =
+        runBinding("sessionGetBytes", promise) {
+            Base64.encodeToString(
+                uniffi.pubkycore.sessionGetBytes(pathOrAddress, sessionSecret),
+                Base64.NO_WRAP,
+            )
+        }
+
+    @ReactMethod
+    fun sessionExists(pathOrAddress: String, sessionSecret: String, promise: Promise) =
+        runBinding("sessionExists", promise) {
+            uniffi.pubkycore.sessionExists(pathOrAddress, sessionSecret)
+        }
+
+    @ReactMethod
+    fun sessionStats(pathOrAddress: String, sessionSecret: String, promise: Promise) =
+        runBinding("sessionStats", promise) {
+            PubkyBridge.stats(uniffi.pubkycore.sessionStats(pathOrAddress, sessionSecret))
+        }
+
+    @ReactMethod
+    fun sessionList(pathOrAddress: String, sessionSecret: String, options: String, promise: Promise) =
+        runBinding("sessionList", promise) {
+            PubkyBridge.listPage(
+                uniffi.pubkycore.sessionList(
+                    pathOrAddress,
+                    sessionSecret,
+                    PubkyBridge.listOptions(options),
+                ),
+            )
+        }
+
+    @ReactMethod
+    fun sessionPutBytes(
+        pathOrAddress: String,
+        content: String,
+        sessionSecret: String,
+        promise: Promise,
+    ) = runBinding("sessionPutBytes", promise) {
+        uniffi.pubkycore.sessionPutBytes(
+            pathOrAddress,
+            PubkyBridge.requiredBytes(content, "content"),
+            sessionSecret,
+        )
+        null
+    }
+
+    @ReactMethod
+    fun sessionDelete(pathOrAddress: String, sessionSecret: String, promise: Promise) =
+        runBinding("sessionDelete", promise) {
+            uniffi.pubkycore.sessionDelete(pathOrAddress, sessionSecret)
+            null
+        }
+
+    @ReactMethod
+    fun startGrantAuthFlowWithConfig(configJson: String, promise: Promise) =
+        runBinding("startGrantAuthFlowWithConfig", promise) {
+            PubkyBridge.flowState(
+                uniffi.pubkycore.startGrantAuthFlowWithConfig(
+                    PubkyBridge.grantFlowConfig(configJson),
+                ),
+            )
+        }
+
+    @ReactMethod
+    fun saveGrantAuthFlow(promise: Promise) =
+        runBinding("saveGrantAuthFlow", promise) {
+            PubkyBridge.flowState(uniffi.pubkycore.saveGrantAuthFlow())
+        }
+
+    @ReactMethod
+    fun restoreGrantAuthFlow(stateJson: String, promise: Promise) =
+        runBinding("restoreGrantAuthFlow", promise) {
+            uniffi.pubkycore.restoreGrantAuthFlow(PubkyBridge.grantFlowState(stateJson))
+        }
+
+    @ReactMethod
+    fun pollGrantAuthFlow(promise: Promise) =
+        runBinding("pollGrantAuthFlow", promise) {
+            uniffi.pubkycore.pollGrantAuthFlow()
+        }
+
+    @ReactMethod
+    fun awaitGrantAuthFlow(promise: Promise) =
+        runBinding("awaitGrantAuthFlow", promise) {
+            uniffi.pubkycore.awaitGrantAuthFlow()
+        }
+
+    @ReactMethod
+    fun cancelGrantAuthFlow(promise: Promise) =
+        runBinding("cancelGrantAuthFlow", promise) {
+            uniffi.pubkycore.cancelGrantAuthFlow()
+            null
+        }
+
+    @ReactMethod
+    fun signInGrantBlocking(secretKey: String, clientId: String, promise: Promise) =
+        runBinding("signInGrantBlocking", promise) {
+            uniffi.pubkycore.signInGrantBlocking(secretKey, clientId)
+        }
+
+    @ReactMethod
+    fun signInCookieBlocking(secretKey: String, promise: Promise) =
+        runBinding("signInCookieBlocking", promise) {
+            uniffi.pubkycore.signInCookieBlocking(secretKey)
+        }
+
+    @ReactMethod
+    fun startStorageEventStream(
+        configJson: String,
+        subscriptionId: String,
+        promise: Promise,
+    ) = runBinding("startStorageEventStream", promise) {
+        val nativeId = uniffi.pubkycore.startEventStream(
+            PubkyBridge.eventStreamConfig(configJson),
+            StorageEventListener(subscriptionId),
+        )
+        eventStreams[subscriptionId] = nativeId
+        null
+    }
+
+    @ReactMethod
+    fun stopStorageEventStream(subscriptionId: String, promise: Promise) =
+        runBinding("stopStorageEventStream", promise) {
+            eventStreams.remove(subscriptionId)?.let { nativeId ->
+                uniffi.pubkycore.stopEventStream(nativeId)
+            } ?: false
+        }
+
+    @ReactMethod
+    fun stopAllStorageEventStreams(promise: Promise) =
+        runBinding("stopAllStorageEventStreams", promise) {
+            eventStreams.clear()
+            uniffi.pubkycore.stopAllEventStreams().toString()
+        }
+
+    @ReactMethod
+    fun acquireStorageLock(
+        pathOrAddress: String,
+        sessionSecret: String,
+        timeoutSeconds: Double,
+        promise: Promise,
+    ) = runBinding("acquireStorageLock", promise) {
+        val storageLock = uniffi.pubkycore.sessionLock(
+            pathOrAddress,
+            sessionSecret,
+            unsigned(timeoutSeconds, "timeoutSeconds"),
+        )
+        val id = UUID.randomUUID().toString()
+        storageLocks[id] = storageLock
+        PubkyBridge.lockInfo(id, storageLock.info())
+    }
+
+    @ReactMethod
+    fun refreshStorageLock(lockId: String, timeoutSeconds: Double, promise: Promise) =
+        runBinding("refreshStorageLock", promise) {
+            val storageLock = storageLocks[lockId]
+                ?: throw IllegalArgumentException("Unknown or released storage lock")
+            PubkyBridge.lockInfo(
+                lockId,
+                storageLock.refresh(unsigned(timeoutSeconds, "timeoutSeconds")),
+            )
+        }
+
+    @ReactMethod
+    fun putWithStorageLock(lockId: String, content: String, promise: Promise) =
+        runBinding("putWithStorageLock", promise) {
+            val storageLock = storageLocks[lockId]
+                ?: throw IllegalArgumentException("Unknown or released storage lock")
+            storageLock.put(PubkyBridge.requiredBytes(content, "content"))
+            null
+        }
+
+    @ReactMethod
+    fun deleteWithStorageLock(lockId: String, promise: Promise) =
+        runBinding("deleteWithStorageLock", promise) {
+            val storageLock = storageLocks[lockId]
+                ?: throw IllegalArgumentException("Unknown or released storage lock")
+            storageLock.delete()
+            null
+        }
+
+    @ReactMethod
+    fun releaseStorageLock(lockId: String, promise: Promise) =
+        runBinding("releaseStorageLock", promise) {
+            val storageLock = storageLocks[lockId]
+                ?: throw IllegalArgumentException("Unknown or released storage lock")
+            storageLock.unlock()
+            storageLocks.remove(lockId)?.destroy()
+            null
+        }
 
     companion object {
         const val NAME = "Pubky"
