@@ -23,7 +23,7 @@ npm install @synonymdev/react-native-pubky
 - [x] [signIn](#signIn): Grant sign-in to a homeserver.
 - [x] signInGrant / signInCookie: Explicit Grant and legacy cookie sign-in methods.
 - [x] [signOut](#signOut): Sign-out from a homeserver.
-- [x] listGrants / revokeGrant: List and revoke account grants using a root-capability session.
+- [x] [listGrants](#listGrants) / [revokeGrant](#revokeGrant): List and revoke account grants using a root-capability session.
 - [x] [put](#put): Upload a small payload to a given path.
 - [x] [get](#get): Download a small payload from a given path relative to a pubky author.
 - [x] [list](#list): Returns a list of Pubky URLs of the files in the path of the `url` provided.
@@ -337,6 +337,60 @@ if (signOutRes.isErr()) {
 console.log(signOutRes.value);
 ```
 
+### <a name="listGrants"></a>listGrants
+List the grants authorized for an account using a root-capability session. Each entry contains the grant ID needed by `revokeGrant`.
+```js
+import { listGrants } from '@synonymdev/react-native-pubky';
+
+const grantsRes = await listGrants(
+  'management_grant_secret' // grant_secret for a root-capability session
+);
+if (grantsRes.isErr()) {
+  console.log(grantsRes.error.message);
+  return;
+}
+console.log(grantsRes.value);
+// [{
+//   grant_id: '01K...',
+//   client_id: 'com.example.app',
+//   capabilities: '/priv/example/:rw',
+//   issued_at: 1750000000,
+//   expires_at: 1750003600
+// }]
+```
+
+### <a name="revokeGrant"></a>revokeGrant
+Revoke a grant by passing a `grant_id` returned by `listGrants`. A Grant session also exposes its own ID as `GrantSessionInfo.grant_id`; exclude that ID when presenting revocable grants so the caller does not revoke its management session.
+```js
+import { listGrants, revokeGrant } from '@synonymdev/react-native-pubky';
+
+async function revokeAnotherGrant(managementSession) {
+  const grantsRes = await listGrants(managementSession.grant_secret);
+  if (grantsRes.isErr()) {
+    console.log(grantsRes.error.message);
+    return;
+  }
+
+  const grantToRevoke = grantsRes.value.find(
+    grant => grant.grant_id !== managementSession.grant_id
+  );
+
+  if (!grantToRevoke) {
+    return;
+  }
+
+  const revokeRes = await revokeGrant(
+    managementSession.grant_secret,
+    grantToRevoke.grant_id
+  );
+  if (revokeRes.isErr()) {
+    console.log(revokeRes.error.message);
+    return;
+  }
+  console.log(revokeRes.value);
+}
+```
+
 ### <a name="createRecoveryFile"></a>createRecoveryFile
 ```js
 import { createRecoveryFile } from '@synonymdev/react-native-pubky';
@@ -397,7 +451,18 @@ if (approvalRes.isErr()) {
   console.log(approvalRes.error.message);
   return;
 }
-console.log(approvalRes.value); // { pubky, capabilities, grant_secret }
+console.log(approvalRes.value);
+// {
+//   homeserver,
+//   pubky,
+//   client_id,
+//   capabilities,
+//   grant_id,
+//   token_expires_at,
+//   grant_expires_at,
+//   created_at,
+//   grant_secret
+// }
 
 const cookieApprovalRes = await awaitCookieAuthApproval();
 if (cookieApprovalRes.isErr()) {
