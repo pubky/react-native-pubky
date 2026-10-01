@@ -1,6 +1,7 @@
 const fs = require('fs').promises;
 const path = require('path');
 const simpleGit = require('simple-git');
+const { verifyAndroidPageSize } = require('./scripts/verify-android-page-size');
 
 // Configuration
 const repoOwner = 'pubky';
@@ -58,6 +59,8 @@ async function runSetup() {
     const jniSourcePath = path.join(tempDir, jniPath);
     const jniTargetPath = jniDestinationPath;
     await fs.cp(jniSourcePath, jniTargetPath, { recursive: true });
+
+    verifyAndroidPageSize();
 
     console.log('Cleaning up...');
     // Clean up temporary directory

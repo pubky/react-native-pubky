@@ -1,97 +1,53 @@
-const exec = require('child_process').exec;
-const fs = require('fs');
+const { execFile } = require('child_process');
+const fs = require('fs').promises;
 const path = require('path');
 const { promisify } = require('util');
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
+const rustDirectory = path.resolve('rust');
+const kotlinSource = path.join(
+  rustDirectory,
+  'bindings',
+  'android',
+  'pubkycore.kt'
+);
+const kotlinDestination = path.resolve(
+  'android',
+  'src',
+  'main',
+  'java',
+  'uniffi',
+  'pubkycore',
+  'pubkycore.kt'
+);
+const jniSource = path.join(rustDirectory, 'bindings', 'android', 'jniLibs');
+const jniDestination = path.resolve('android', 'src', 'main', 'jniLibs');
 
-const directoriesToRemove = ['app', 'target'];
-
-const removeDirectories = () => {
-  directoriesToRemove.forEach((dir) => {
-    const dirPath = path.resolve('rust', dir);
-    if (fs.existsSync(dirPath)) {
-      fs.rmSync(dirPath, { recursive: true });
-      console.log(`Removed directory: ${dirPath}`);
-    }
+async function runSetup() {
+  console.log('Building Android bindings with pubky-core-ffi...');
+  const { stdout, stderr } = await execFileAsync('./build_android.sh', {
+    cwd: rustDirectory,
+    maxBuffer: 16 * 1024 * 1024,
   });
-};
+  process.stdout.write(stdout);
+  process.stderr.write(stderr);
 
-const setupAndroidCommand = `
-  sed -i '' 's/crate\\_type = .\\*/crate\\_type = \\["cdylib"\\]/' Cargo.toml && \\
-  cargo build --release && \\
-  cargo install cargo-ndk && \\
-  rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android && \\
-  cargo ndk -o ./app/src/main/jniLibs --manifest-path ./Cargo.toml -t armeabi-v7a -t arm64-v8a -t x86 -t x86_64 build --release && \\
-  cargo run --bin uniffi-bindgen generate --library ./target/release/libpubkycore.dylib --language kotlin --out-dir ./app/src/main/java/tech/forgen/todolist/rust
-`;
+  await Promise.all([
+    fs.rm(path.dirname(kotlinDestination), { recursive: true, force: true }),
+    fs.rm(jniDestination, { recursive: true, force: true }),
+  ]);
+  await Promise.all([
+    fs.mkdir(path.dirname(kotlinDestination), { recursive: true }),
+    fs.mkdir(jniDestination, { recursive: true }),
+  ]);
 
-const postSetupAndroid = async () => {
-  const rustMobileKt = path.resolve(
-    'rust',
-    'app',
-    'src',
-    'main',
-    'java',
-    'tech',
-    'forgen',
-    'todolist',
-    'rust',
-    'uniffi',
-    'pubkycore',
-    'pubkycore.kt'
-  );
-  const androidMobileKt = path.resolve(
-    'android',
-    'src',
-    'main',
-    'java',
-    'uniffi',
-    'pubkycore',
-    'pubkycore.kt'
-  );
+  await fs.copyFile(kotlinSource, kotlinDestination);
+  await fs.cp(jniSource, jniDestination, { recursive: true });
 
-  // Create the destination directory if it doesn't exist
-  await fs.promises.mkdir(path.dirname(androidMobileKt), { recursive: true });
+  console.log('Android bindings built and copied successfully!');
+}
 
-  // Copy rust/app/src/main/java/tech/forgen/todolist/rust/uniffi/mobile/mobile.kt to android/src/main/java/uniffi/mobile/mobile.kt
-  await fs.promises.copyFile(rustMobileKt, androidMobileKt);
-  console.log(`Copied ${rustMobileKt} to ${androidMobileKt}`);
-
-  const rustJniLibs = path.resolve('rust', 'app', 'src', 'main', 'jniLibs');
-  const androidJniLibs = path.resolve('android', 'src', 'main', 'jniLibs');
-
-  // Copy rust/app/src/main/jniLibs to android/src/main/jniLibs
-  await fs.promises.cp(rustJniLibs, androidJniLibs, {
-    recursive: true,
-    force: true,
-  });
-  console.log(`Copied contents of ${rustJniLibs} to ${androidJniLibs}`);
-};
-
-const originalDir = process.cwd();
-
-const runSetup = async () => {
-  try {
-    removeDirectories();
-
-    // Change the current working directory to the 'rust' directory
-    process.chdir('rust');
-
-    const { stdout, stderr } = await execAsync(setupAndroidCommand);
-    console.log(`Setup Android command output: ${stdout}`);
-
-    if (stderr) {
-      console.error(`Setup Android command stderr: ${stderr}`);
-    }
-
-    // Revert to the original directory after setupAndroidCommand execution
-    process.chdir(originalDir);
-
-    await postSetupAndroid();
-  } catch (error) {
-    console.error(`Error executing setup-android command: ${error.message}`);
-  }
-};
-
-runSetup();
+runSetup().catch((error) => {
+  console.error('Error during Android binding setup:', error);
+  process.exit(1);
+});
