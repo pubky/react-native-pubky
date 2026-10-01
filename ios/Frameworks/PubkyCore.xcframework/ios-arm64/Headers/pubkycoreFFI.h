@@ -105,6 +105,8 @@ RustBuffer uniffi_pubkycore_fn_func_get_signup_token(RustBuffer homeserver_pubky
 );
 RustBuffer uniffi_pubkycore_fn_func_list(RustBuffer url, RustCallStatus *_Nonnull out_status
 );
+RustBuffer uniffi_pubkycore_fn_func_list_grants(RustBuffer session_secret, RustCallStatus *_Nonnull out_status
+);
 RustBuffer uniffi_pubkycore_fn_func_mnemonic_phrase_to_keypair(RustBuffer mnemonic_phrase, RustCallStatus *_Nonnull out_status
 );
 RustBuffer uniffi_pubkycore_fn_func_parse_auth_url(RustBuffer url, RustCallStatus *_Nonnull out_status
@@ -129,6 +131,8 @@ RustBuffer uniffi_pubkycore_fn_func_resolve(RustBuffer public_key, RustCallStatu
 RustBuffer uniffi_pubkycore_fn_func_resolve_https(RustBuffer public_key, RustCallStatus *_Nonnull out_status
 );
 RustBuffer uniffi_pubkycore_fn_func_revalidate_session(RustBuffer session_secret, RustCallStatus *_Nonnull out_status
+);
+RustBuffer uniffi_pubkycore_fn_func_revoke_grant(RustBuffer session_secret, RustBuffer grant_id, RustCallStatus *_Nonnull out_status
 );
 void uniffi_pubkycore_fn_func_set_event_listener(uint64_t listener, RustCallStatus *_Nonnull out_status
 );
@@ -318,6 +322,9 @@ uint16_t uniffi_pubkycore_checksum_func_get_signup_token(void
 uint16_t uniffi_pubkycore_checksum_func_list(void
 
 );
+uint16_t uniffi_pubkycore_checksum_func_list_grants(void
+
+);
 uint16_t uniffi_pubkycore_checksum_func_mnemonic_phrase_to_keypair(void
 
 );
@@ -352,6 +359,9 @@ uint16_t uniffi_pubkycore_checksum_func_resolve_https(void
 
 );
 uint16_t uniffi_pubkycore_checksum_func_revalidate_session(void
+
+);
+uint16_t uniffi_pubkycore_checksum_func_revoke_grant(void
 
 );
 uint16_t uniffi_pubkycore_checksum_func_set_event_listener(void

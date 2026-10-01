@@ -776,6 +776,16 @@ public func list(url: String) -> [String] {
     )
 }
 
+public func listGrants(sessionSecret: String) -> [String] {
+    return try! FfiConverterSequenceString.lift(
+        try! rustCall {
+            uniffi_pubkycore_fn_func_list_grants(
+                FfiConverterString.lower(sessionSecret), $0
+            )
+        }
+    )
+}
+
 public func mnemonicPhraseToKeypair(mnemonicPhrase: String) -> [String] {
     return try! FfiConverterSequenceString.lift(
         try! rustCall {
@@ -897,6 +907,17 @@ public func revalidateSession(sessionSecret: String) -> [String] {
         try! rustCall {
             uniffi_pubkycore_fn_func_revalidate_session(
                 FfiConverterString.lower(sessionSecret), $0
+            )
+        }
+    )
+}
+
+public func revokeGrant(sessionSecret: String, grantId: String) -> [String] {
+    return try! FfiConverterSequenceString.lift(
+        try! rustCall {
+            uniffi_pubkycore_fn_func_revoke_grant(
+                FfiConverterString.lower(sessionSecret),
+                FfiConverterString.lower(grantId), $0
             )
         }
     )
@@ -1106,6 +1127,9 @@ private var initializationResult: InitializationResult {
     if uniffi_pubkycore_checksum_func_list() != 43198 {
         return InitializationResult.apiChecksumMismatch
     }
+    if uniffi_pubkycore_checksum_func_list_grants() != 59792 {
+        return InitializationResult.apiChecksumMismatch
+    }
     if uniffi_pubkycore_checksum_func_mnemonic_phrase_to_keypair() != 45784 {
         return InitializationResult.apiChecksumMismatch
     }
@@ -1140,6 +1164,9 @@ private var initializationResult: InitializationResult {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_pubkycore_checksum_func_revalidate_session() != 57726 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_pubkycore_checksum_func_revoke_grant() != 15677 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_pubkycore_checksum_func_set_event_listener() != 60071 {
