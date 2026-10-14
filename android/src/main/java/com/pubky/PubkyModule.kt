@@ -31,6 +31,15 @@ class PubkyModule(reactContext: ReactApplicationContext) :
         return NAME
     }
 
+    override fun invalidate() {
+        val nativeIds = eventStreams.values.toList()
+        eventStreams.clear()
+        nativeIds.forEach { nativeId ->
+            runCatching { uniffi.pubkycore.stopEventStream(nativeId) }
+        }
+        super.invalidate()
+    }
+
     private val eventListener = object : EventListener {
         override fun onEventOccurred(eventData: String) {
             reactContext
@@ -77,6 +86,7 @@ class PubkyModule(reactContext: ReactApplicationContext) :
         }
 
         override fun onError(message: String) {
+            eventStreams.remove(subscriptionId)
             val body = Arguments.createMap().apply {
                 putString("subscriptionId", subscriptionId)
                 putString("message", message)
@@ -87,6 +97,7 @@ class PubkyModule(reactContext: ReactApplicationContext) :
         }
 
         override fun onComplete() {
+            eventStreams.remove(subscriptionId)
             val body = Arguments.createMap().apply {
                 putString("subscriptionId", subscriptionId)
             }
