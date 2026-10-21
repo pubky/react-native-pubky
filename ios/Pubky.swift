@@ -3,6 +3,7 @@ import React
 
 @objc(Pubky)
 class Pubky: RCTEventEmitter {
+    let bridgeState = PubkyBridgeState()
 
     override init() {
         super.init()
@@ -13,7 +14,21 @@ class Pubky: RCTEventEmitter {
     }
 
     override func supportedEvents() -> [String]! {
-        return ["PubkyEvent"]
+        return [
+            "PubkyEvent",
+            "PubkyStorageEvent",
+            "PubkyStorageEventError",
+            "PubkyStorageEventComplete",
+        ]
+    }
+
+    override func invalidate() {
+        let resources = bridgeState.invalidate()
+        for nativeId in resources.eventStreamIds {
+            _ = react_native_pubky.stopEventStream(subscriptionId: nativeId)
+        }
+        react_native_pubky.removeEventListener()
+        super.invalidate()
     }
 
     class EventListenerImpl: EventListener {
@@ -49,6 +64,22 @@ class Pubky: RCTEventEmitter {
                 resolve(result)
             } catch {
                 reject("auth Error", "Failed to auth", error)
+            }
+        }
+    }
+
+    @objc(authWithCapabilities:secretKey:approvedCapabilities:withResolver:withRejecter:)
+    func authWithCapabilities(_ url: String, secretKey: String, approvedCapabilities: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        Task {
+            do {
+                let result = try await react_native_pubky.authWithCapabilities(
+                    url: url,
+                    secretKey: secretKey,
+                    approvedCapabilities: approvedCapabilities
+                )
+                resolve(result)
+            } catch {
+                reject("authWithCapabilities Error", "Failed to authorize selected capabilities", error)
             }
         }
     }
