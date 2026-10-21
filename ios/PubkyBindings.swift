@@ -211,14 +211,18 @@ private enum PubkyBridge {
 }
 
 final class PubkyBridgeState {
+    // Serialize async registration with teardown so resources cannot outlive the bridge.
     private let lock = NSLock()
+    private var invalidated = false
     private var storageLocks: [String: PubkyStorageLock] = [:]
     private var eventStreams: [String: String] = [:]
 
-    func store(lock storageLock: PubkyStorageLock, id: String) {
+    func store(lock storageLock: PubkyStorageLock, id: String) -> Bool {
         lock.lock()
+        defer { lock.unlock() }
+        guard !invalidated else { return false }
         storageLocks[id] = storageLock
-        lock.unlock()
+        return true
     }
 
     func storageLock(id: String) -> PubkyStorageLock? {
@@ -233,18 +237,12 @@ final class PubkyBridgeState {
         return storageLocks.removeValue(forKey: id)
     }
 
-    func takeAllStorageLocks() -> [PubkyStorageLock] {
+    func store(eventStream nativeId: String, id: String) -> Bool {
         lock.lock()
         defer { lock.unlock() }
-        let locks = Array(storageLocks.values)
-        storageLocks.removeAll()
-        return locks
-    }
-
-    func store(eventStream nativeId: String, id: String) {
-        lock.lock()
+        guard !invalidated else { return false }
         eventStreams[id] = nativeId
-        lock.unlock()
+        return true
     }
 
     func removeEventStream(id: String) -> String? {
@@ -259,12 +257,15 @@ final class PubkyBridgeState {
         lock.unlock()
     }
 
-    func takeAllEventStreams() -> [String] {
+    func invalidate() -> (eventStreamIds: [String], storageLocks: [PubkyStorageLock]) {
         lock.lock()
         defer { lock.unlock() }
+        invalidated = true
         let nativeIds = Array(eventStreams.values)
+        let locks = Array(storageLocks.values)
         eventStreams.removeAll()
-        return nativeIds
+        storageLocks.removeAll()
+        return (nativeIds, locks)
     }
 }
 
@@ -597,7 +598,10 @@ extension Pubky {
                     bridgeState: bridgeState
                 )
                 let nativeId = try react_native_pubky.startEventStream(config: config, listener: listener)
-                bridgeState.store(eventStream: nativeId, id: subscriptionId)
+                guard bridgeState.store(eventStream: nativeId, id: subscriptionId) else {
+                    _ = react_native_pubky.stopEventStream(subscriptionId: nativeId)
+                    throw PubkyBridgeValidationError(message: "Native bridge was invalidated")
+                }
                 resolve(nil)
             } catch { PubkyBridge.reject(error, operation: "startStorageEventStream", reject: reject) }
         }
@@ -625,7 +629,9 @@ extension Pubky {
                 guard let timeout = try PubkyBridge.uint64(timeoutSeconds, field: "timeoutSeconds") else { throw PubkyBridgeValidationError(message: "timeoutSeconds is required") }
                 let storageLock = try react_native_pubky.sessionLock(pathOrAddress: pathOrAddress, sessionSecret: sessionSecret, timeoutSeconds: timeout)
                 let id = UUID().uuidString
-                bridgeState.store(lock: storageLock, id: id)
+                guard bridgeState.store(lock: storageLock, id: id) else {
+                    throw PubkyBridgeValidationError(message: "Native bridge was invalidated")
+                }
                 resolve(try PubkyBridge.lockInfo(id, storageLock.info()))
             } catch { PubkyBridge.reject(error, operation: "acquireStorageLock", reject: reject) }
         }

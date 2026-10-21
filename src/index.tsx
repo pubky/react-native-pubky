@@ -1439,6 +1439,11 @@ export async function deleteWithStorageLock(
   });
 }
 
+/**
+ * Releases a storage lock. The handle is consumed even if the server-side
+ * unlock fails, so the same `lockId` cannot be retried. In that case, the
+ * server lock can remain active until its timeout expires.
+ */
 export async function releaseStorageLock(
   lockId: string
 ): Promise<Result<void>> {

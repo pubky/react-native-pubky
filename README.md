@@ -66,7 +66,7 @@ The complete high-level Pubky 0.16 client surface is exposed on both Android and
 - `grantEncryptionKeyScopes`, `deriveGrantEncryptionKey`, and `grantSignedApproval` expose signed-approval key material.
 - `signInGrantBlocking` and `signInCookieBlocking` provide blocking sign-in when that execution model is appropriate.
 - `startEventStream`, `stopEventStream`, and `stopAllEventStreams` manage live storage events.
-- `acquireStorageLock`, `refreshStorageLock`, `putWithStorageLock`, `deleteWithStorageLock`, and `releaseStorageLock` manage WebDAV locks.
+- `acquireStorageLock`, `refreshStorageLock`, `putWithStorageLock`, `deleteWithStorageLock`, and `releaseStorageLock` manage WebDAV locks. Releasing consumes the local handle even if the server-side unlock fails; the server lock can then remain active until its timeout expires.
 
 Grant-flow persistence and cancellation are available while driving a flow with `pollGrantAuthFlow`. Once `awaitGrantAuthFlow` starts waiting, the native flow is owned by that pending call and cannot be saved or cancelled. Use polling when an application needs resumability or cancellation.
 

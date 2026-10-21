@@ -20,6 +20,9 @@ class PubkyModule(reactContext: ReactApplicationContext) :
 
     private val storageLocks = ConcurrentHashMap<String, PubkyStorageLock>()
     private val eventStreams = ConcurrentHashMap<String, String>()
+    // Serialize async registration with teardown so resources cannot outlive the bridge.
+    private val lifecycleLock = Any()
+    private var invalidated = false
 
     init {
         // Initialize rustls-platform-verifier with the app Context before any TLS call.
@@ -32,13 +35,17 @@ class PubkyModule(reactContext: ReactApplicationContext) :
     }
 
     override fun invalidate() {
-        val nativeIds = eventStreams.values.toList()
-        eventStreams.clear()
+        val (nativeIds, locks) = synchronized(lifecycleLock) {
+            invalidated = true
+            val registeredNativeIds = eventStreams.values.toList()
+            val registeredLocks = storageLocks.values.toList()
+            eventStreams.clear()
+            storageLocks.clear()
+            Pair(registeredNativeIds, registeredLocks)
+        }
         nativeIds.forEach { nativeId ->
             runCatching { uniffi.pubkycore.stopEventStream(nativeId) }
         }
-        val locks = storageLocks.values.toList()
-        storageLocks.clear()
         locks.forEach { storageLock ->
             runCatching { storageLock.destroy() }
         }
@@ -1124,7 +1131,18 @@ class PubkyModule(reactContext: ReactApplicationContext) :
             PubkyBridge.eventStreamConfig(configJson),
             StorageEventListener(subscriptionId),
         )
-        eventStreams[subscriptionId] = nativeId
+        val registered = synchronized(lifecycleLock) {
+            if (invalidated) {
+                false
+            } else {
+                eventStreams[subscriptionId] = nativeId
+                true
+            }
+        }
+        if (!registered) {
+            uniffi.pubkycore.stopEventStream(nativeId)
+            throw IllegalStateException("Native bridge was invalidated")
+        }
         null
     }
 
@@ -1156,7 +1174,18 @@ class PubkyModule(reactContext: ReactApplicationContext) :
             unsigned(timeoutSeconds, "timeoutSeconds"),
         )
         val id = UUID.randomUUID().toString()
-        storageLocks[id] = storageLock
+        val registered = synchronized(lifecycleLock) {
+            if (invalidated) {
+                false
+            } else {
+                storageLocks[id] = storageLock
+                true
+            }
+        }
+        if (!registered) {
+            storageLock.destroy()
+            throw IllegalStateException("Native bridge was invalidated")
+        }
         PubkyBridge.lockInfo(id, storageLock.info())
     }
 

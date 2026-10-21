@@ -23,11 +23,10 @@ class Pubky: RCTEventEmitter {
     }
 
     override func invalidate() {
-        let nativeIds = bridgeState.takeAllEventStreams()
-        for nativeId in nativeIds {
+        let resources = bridgeState.invalidate()
+        for nativeId in resources.eventStreamIds {
             _ = react_native_pubky.stopEventStream(subscriptionId: nativeId)
         }
-        _ = bridgeState.takeAllStorageLocks()
         react_native_pubky.removeEventListener()
         super.invalidate()
     }
