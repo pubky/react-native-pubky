@@ -3,6 +3,7 @@ import React
 
 @objc(Pubky)
 class Pubky: RCTEventEmitter {
+    let bridgeState = PubkyBridgeState()
 
     override init() {
         super.init()
@@ -19,6 +20,16 @@ class Pubky: RCTEventEmitter {
             "PubkyStorageEventError",
             "PubkyStorageEventComplete",
         ]
+    }
+
+    override func invalidate() {
+        let nativeIds = bridgeState.takeAllEventStreams()
+        for nativeId in nativeIds {
+            _ = react_native_pubky.stopEventStream(subscriptionId: nativeId)
+        }
+        _ = bridgeState.takeAllStorageLocks()
+        react_native_pubky.removeEventListener()
+        super.invalidate()
     }
 
     class EventListenerImpl: EventListener {

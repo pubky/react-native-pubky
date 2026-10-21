@@ -73,6 +73,7 @@ import { NativeModules } from 'react-native';
 
 import {
   PubkyError,
+  type PubkyStorageEvent,
   authWithCapabilities,
   configureClient,
   createCustomGrantProof,
@@ -178,6 +179,9 @@ it('decodes structured native failures into PubkyError', async () => {
   expect(result.isErr()).toBe(true);
   if (result.isErr()) {
     expect(result.error).toBeInstanceOf(PubkyError);
+    if (!(result.error instanceof PubkyError)) return;
+    expect(result.error.kind).toBe('server');
+    expect(result.error.status).toBe(503);
     expect(result.error).toMatchObject({
       kind: 'server',
       operation: 'publicList',
@@ -187,7 +191,7 @@ it('decodes structured native failures into PubkyError', async () => {
   }
 });
 
-it('routes storage events to only the matching subscription', async () => {
+it('routes storage events with nullable hashes to only the matching subscription', async () => {
   const onEvent = jest.fn();
   const started = await startEventStream(
     { users: [{ publicKey: 'user' }] },
@@ -200,17 +204,19 @@ it('routes storage events to only the matching subscription', async () => {
     subscriptionId: 'different-subscription',
     event: { eventType: 'PUT', resource: '/pub/ignored', cursor: '1' },
   });
+  const deletion: PubkyStorageEvent = {
+    eventType: 'DEL',
+    resource: '/pub/example',
+    cursor: '2',
+    contentHash: null,
+  };
   emit('PubkyStorageEvent', {
     subscriptionId: started.value.id,
-    event: { eventType: 'PUT', resource: '/pub/example', cursor: '2' },
+    event: deletion,
   });
 
   expect(onEvent).toHaveBeenCalledTimes(1);
-  expect(onEvent).toHaveBeenCalledWith({
-    eventType: 'PUT',
-    resource: '/pub/example',
-    cursor: '2',
-  });
+  expect(onEvent).toHaveBeenCalledWith(deletion);
   expect(native.startStorageEventStream).toHaveBeenCalledWith(
     JSON.stringify({
       paths: [],

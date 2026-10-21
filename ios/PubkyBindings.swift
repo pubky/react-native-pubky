@@ -42,7 +42,7 @@ private enum PubkyBridge {
         if let number = value as? NSNumber {
             let double = number.doubleValue
             guard double.isFinite, double >= 0, double.rounded(.towardZero) == double,
-                  double <= Double(UInt64.max)
+                  double < Double(UInt64.max)
             else {
                 throw PubkyBridgeValidationError(message: "\(field) must be an unsigned integer")
             }
@@ -210,9 +210,7 @@ private enum PubkyBridge {
     }
 }
 
-private final class PubkyBridgeState {
-    static let shared = PubkyBridgeState()
-
+final class PubkyBridgeState {
     private let lock = NSLock()
     private var storageLocks: [String: PubkyStorageLock] = [:]
     private var eventStreams: [String: String] = [:]
@@ -229,10 +227,18 @@ private final class PubkyBridgeState {
         return storageLocks[id]
     }
 
-    func removeStorageLock(id: String) {
+    func removeStorageLock(id: String) -> PubkyStorageLock? {
         lock.lock()
-        storageLocks.removeValue(forKey: id)
-        lock.unlock()
+        defer { lock.unlock() }
+        return storageLocks.removeValue(forKey: id)
+    }
+
+    func takeAllStorageLocks() -> [PubkyStorageLock] {
+        lock.lock()
+        defer { lock.unlock() }
+        let locks = Array(storageLocks.values)
+        storageLocks.removeAll()
+        return locks
     }
 
     func store(eventStream nativeId: String, id: String) {
@@ -252,15 +258,25 @@ private final class PubkyBridgeState {
         eventStreams.removeAll()
         lock.unlock()
     }
+
+    func takeAllEventStreams() -> [String] {
+        lock.lock()
+        defer { lock.unlock() }
+        let nativeIds = Array(eventStreams.values)
+        eventStreams.removeAll()
+        return nativeIds
+    }
 }
 
 private final class PubkyStorageEventListener: PubkyEventStreamListener {
     weak var pubky: Pubky?
     let subscriptionId: String
+    let bridgeState: PubkyBridgeState
 
-    init(pubky: Pubky, subscriptionId: String) {
+    init(pubky: Pubky, subscriptionId: String, bridgeState: PubkyBridgeState) {
         self.pubky = pubky
         self.subscriptionId = subscriptionId
+        self.bridgeState = bridgeState
     }
 
     func onEvent(event: PubkyStorageEvent) {
@@ -278,6 +294,7 @@ private final class PubkyStorageEventListener: PubkyEventStreamListener {
     }
 
     func onError(message: String) {
+        _ = bridgeState.removeEventStream(id: subscriptionId)
         pubky?.sendEvent(withName: "PubkyStorageEventError", body: [
             "subscriptionId": subscriptionId,
             "message": message,
@@ -285,6 +302,7 @@ private final class PubkyStorageEventListener: PubkyEventStreamListener {
     }
 
     func onComplete() {
+        _ = bridgeState.removeEventStream(id: subscriptionId)
         pubky?.sendEvent(withName: "PubkyStorageEventComplete", body: [
             "subscriptionId": subscriptionId,
         ])
@@ -293,7 +311,7 @@ private final class PubkyStorageEventListener: PubkyEventStreamListener {
 
 extension Pubky {
     private func requireStorageLock(_ id: String) throws -> PubkyStorageLock {
-        guard let storageLock = PubkyBridgeState.shared.storageLock(id: id) else {
+        guard let storageLock = bridgeState.storageLock(id: id) else {
             throw PubkyBridgeValidationError(message: "Unknown or released storage lock")
         }
         return storageLock
@@ -573,9 +591,13 @@ extension Pubky {
                     reverse: PubkyBridge.bool(value["reverse"]),
                     sessionSecret: PubkyBridge.string(value["sessionSecret"])
                 )
-                let listener = PubkyStorageEventListener(pubky: self, subscriptionId: subscriptionId)
+                let listener = PubkyStorageEventListener(
+                    pubky: self,
+                    subscriptionId: subscriptionId,
+                    bridgeState: bridgeState
+                )
                 let nativeId = try react_native_pubky.startEventStream(config: config, listener: listener)
-                PubkyBridgeState.shared.store(eventStream: nativeId, id: subscriptionId)
+                bridgeState.store(eventStream: nativeId, id: subscriptionId)
                 resolve(nil)
             } catch { PubkyBridge.reject(error, operation: "startStorageEventStream", reject: reject) }
         }
@@ -583,7 +605,7 @@ extension Pubky {
 
     @objc(stopStorageEventStream:withResolver:withRejecter:)
     func stopStorageEventStream(_ subscriptionId: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
-        guard let nativeId = PubkyBridgeState.shared.removeEventStream(id: subscriptionId) else {
+        guard let nativeId = bridgeState.removeEventStream(id: subscriptionId) else {
             resolve(false)
             return
         }
@@ -592,7 +614,7 @@ extension Pubky {
 
     @objc(stopAllStorageEventStreams:withRejecter:)
     func stopAllStorageEventStreams(_ resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
-        PubkyBridgeState.shared.removeAllEventStreams()
+        bridgeState.removeAllEventStreams()
         resolve(String(react_native_pubky.stopAllEventStreams()))
     }
 
@@ -603,7 +625,7 @@ extension Pubky {
                 guard let timeout = try PubkyBridge.uint64(timeoutSeconds, field: "timeoutSeconds") else { throw PubkyBridgeValidationError(message: "timeoutSeconds is required") }
                 let storageLock = try react_native_pubky.sessionLock(pathOrAddress: pathOrAddress, sessionSecret: sessionSecret, timeoutSeconds: timeout)
                 let id = UUID().uuidString
-                PubkyBridgeState.shared.store(lock: storageLock, id: id)
+                bridgeState.store(lock: storageLock, id: id)
                 resolve(try PubkyBridge.lockInfo(id, storageLock.info()))
             } catch { PubkyBridge.reject(error, operation: "acquireStorageLock", reject: reject) }
         }
@@ -644,8 +666,10 @@ extension Pubky {
     func releaseStorageLock(_ id: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
         Task {
             do {
-                try requireStorageLock(id).unlock()
-                PubkyBridgeState.shared.removeStorageLock(id: id)
+                guard let storageLock = bridgeState.removeStorageLock(id: id) else {
+                    throw PubkyBridgeValidationError(message: "Unknown or released storage lock")
+                }
+                try storageLock.unlock()
                 resolve(nil)
             } catch { PubkyBridge.reject(error, operation: "releaseStorageLock", reject: reject) }
         }

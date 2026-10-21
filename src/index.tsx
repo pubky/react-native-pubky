@@ -1031,7 +1031,7 @@ export interface PubkyStorageEvent {
   eventType: 'PUT' | 'DEL' | string;
   resource: string;
   cursor: UInt64String;
-  contentHash?: string;
+  contentHash: string | null;
 }
 
 export interface StorageLockInfo {
@@ -1166,6 +1166,10 @@ export async function startGrantAuthFlowWithConfig(
   );
 }
 
+/**
+ * Save a pending Grant flow while driving it with `pollGrantAuthFlow`.
+ * A flow cannot be saved after `awaitGrantAuthFlow` has started waiting.
+ */
 export async function saveGrantAuthFlow(): Promise<Result<GrantAuthFlowState>> {
   return typedResult('saveGrantAuthFlow', async () =>
     parseNativeJson<GrantAuthFlowState>(await Pubky.saveGrantAuthFlow())
@@ -1189,12 +1193,20 @@ export async function pollGrantAuthFlow(): Promise<
   });
 }
 
+/**
+ * Wait until the current Grant flow completes.
+ * While this call is pending, the flow cannot be saved or cancelled.
+ */
 export async function awaitGrantAuthFlow(): Promise<Result<GrantSessionInfo>> {
   return typedResult('awaitGrantAuthFlow', async () =>
     parseNativeJson<GrantSessionInfo>(await Pubky.awaitGrantAuthFlow())
   );
 }
 
+/**
+ * Cancel a pending Grant flow between polling calls.
+ * This does not abort an already-pending `awaitGrantAuthFlow` call.
+ */
 export async function cancelGrantAuthFlow(): Promise<Result<void>> {
   return typedResult('cancelGrantAuthFlow', async () => {
     await Pubky.cancelGrantAuthFlow();

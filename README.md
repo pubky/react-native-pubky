@@ -68,11 +68,14 @@ The complete high-level Pubky 0.16 client surface is exposed on both Android and
 - `startEventStream`, `stopEventStream`, and `stopAllEventStreams` manage live storage events.
 - `acquireStorageLock`, `refreshStorageLock`, `putWithStorageLock`, `deleteWithStorageLock`, and `releaseStorageLock` manage WebDAV locks.
 
+Grant-flow persistence and cancellation are available while driving a flow with `pollGrantAuthFlow`. Once `awaitGrantAuthFlow` starts waiting, the native flow is owned by that pending call and cannot be saved or cancelled. Use polling when an application needs resumability or cancellation.
+
 Binary values cross the React Native bridge as standard padded base64 strings. Unsigned 64-bit values are returned as decimal strings so JavaScript does not lose precision. New client APIs return `PubkyError` on failure; use its `kind`, `operation`, `status`, `retryable`, and `expired` fields for structured handling.
 
 ```ts
 import {
   publicGetBytes,
+  PubkyError,
   sessionPutBytes,
   type Base64Data,
 } from '@synonymdev/react-native-pubky';
@@ -82,7 +85,11 @@ await sessionPutBytes('/pub/example/message.txt', content, sessionSecret);
 
 const result = await publicGetBytes('pubky://user/pub/example/message.txt');
 if (result.isErr()) {
-  console.log(result.error.kind, result.error.status);
+  if (result.error instanceof PubkyError) {
+    console.log(result.error.kind, result.error.status);
+  } else {
+    console.log(result.error.message);
+  }
 }
 ```
 

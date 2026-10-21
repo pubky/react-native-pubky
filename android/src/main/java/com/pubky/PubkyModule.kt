@@ -37,6 +37,11 @@ class PubkyModule(reactContext: ReactApplicationContext) :
         nativeIds.forEach { nativeId ->
             runCatching { uniffi.pubkycore.stopEventStream(nativeId) }
         }
+        val locks = storageLocks.values.toList()
+        storageLocks.clear()
+        locks.forEach { storageLock ->
+            runCatching { storageLock.destroy() }
+        }
         super.invalidate()
     }
 
@@ -60,7 +65,12 @@ class PubkyModule(reactContext: ReactApplicationContext) :
     }
 
     private fun unsigned(value: Double, field: String): ULong {
-        require(value.isFinite() && value >= 0 && value % 1.0 == 0.0) {
+        require(
+            value.isFinite() &&
+                value >= 0 &&
+                value % 1.0 == 0.0 &&
+                value < ULong.MAX_VALUE.toDouble()
+        ) {
             "$field must be an unsigned integer"
         }
         return value.toULong()
@@ -1182,10 +1192,13 @@ class PubkyModule(reactContext: ReactApplicationContext) :
     @ReactMethod
     fun releaseStorageLock(lockId: String, promise: Promise) =
         runBinding("releaseStorageLock", promise) {
-            val storageLock = storageLocks[lockId]
+            val storageLock = storageLocks.remove(lockId)
                 ?: throw IllegalArgumentException("Unknown or released storage lock")
-            storageLock.unlock()
-            storageLocks.remove(lockId)?.destroy()
+            try {
+                storageLock.unlock()
+            } finally {
+                storageLock.destroy()
+            }
             null
         }
 
