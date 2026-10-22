@@ -1,5 +1,6 @@
-import { StyleSheet, Button, ScrollView } from 'react-native';
-import { useEffect } from 'react';
+import { StyleSheet, Button, Linking, ScrollView, Text } from 'react-native';
+import { useEffect, useState } from 'react';
+import Clipboard from '@react-native-clipboard/clipboard';
 import {
   auth,
   parseAuthUrl,
@@ -28,6 +29,8 @@ import {
   generateMnemonicPhraseAndKeypair,
   validateMnemonicPhrase,
   revalidateSession,
+  startGrantAuthFlowWithConfig,
+  awaitGrantAuthFlow,
 } from '@synonymdev/react-native-pubky';
 
 const HOMESERVER = '8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo';
@@ -38,6 +41,10 @@ const PUBLIC_KEY = 'z4e8s17cou9qmuwen8p1556jzhf1wktmzo6ijsfnri9c4hnrdfty';
 const CLIENT_ID = 'react-native-pubky.example';
 
 export default function App() {
+  const [grantAuthUrl, setGrantAuthUrl] = useState('');
+  const [grantAuthStatus, setGrantAuthStatus] = useState('Not started');
+  const [grantAuthWaiting, setGrantAuthWaiting] = useState(false);
+
   useEffect(() => {
     let cleanupListener: (() => void) | undefined;
 
@@ -66,11 +73,77 @@ export default function App() {
       }
     };
   }, []);
+
+  const startSignedGrantRequest = async (): Promise<void> => {
+    setGrantAuthWaiting(true);
+    setGrantAuthUrl('');
+    setGrantAuthStatus('Creating request…');
+
+    try {
+      const started = await startGrantAuthFlowWithConfig({
+        capabilities: '/priv/example.app/:rwe,/pub/example.app/:rwe',
+        clientId: 'example.app',
+        relay: 'https://httprelay.staging.pubky.app/inbox',
+        approvalFormat: 'signedApprovalV1',
+      });
+
+      if (started.isErr()) {
+        setGrantAuthStatus(
+          `Failed to create request: ${started.error.message}`
+        );
+        return;
+      }
+
+      const { authorizationUrl } = started.value;
+      setGrantAuthUrl(authorizationUrl);
+      Clipboard.setString(authorizationUrl);
+      setGrantAuthStatus('Request URL copied. Waiting for approval…');
+
+      const approved = await awaitGrantAuthFlow();
+      if (approved.isErr()) {
+        setGrantAuthStatus(`Approval failed: ${approved.error.message}`);
+        return;
+      }
+
+      setGrantAuthStatus(
+        `Grant active: ${approved.value.client_id} (${approved.value.grant_id})`
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setGrantAuthStatus(`Unexpected error: ${message}`);
+    } finally {
+      setGrantAuthWaiting(false);
+    }
+  };
+
   return (
     <ScrollView
       contentContainerStyle={styles.scrollContent}
       style={styles.container}
     >
+      <Text style={styles.grantAuthTitle}>Signed grant authorization</Text>
+      <Text style={styles.grantAuthStatus}>{grantAuthStatus}</Text>
+      <Button
+        disabled={grantAuthWaiting}
+        title={'Start signed grant request'}
+        onPress={startSignedGrantRequest}
+      />
+      {grantAuthUrl ? (
+        <>
+          <Text style={styles.grantAuthUrlLabel}>
+            Request URL (copied automatically)
+          </Text>
+          <Text selectable style={styles.grantAuthUrl}>
+            {grantAuthUrl}
+          </Text>
+          <Button
+            title={'Open request in Pubky Ring'}
+            onPress={async (): Promise<void> => {
+              await Linking.openURL(grantAuthUrl);
+            }}
+          />
+        </>
+      ) : null}
       <Button
         title={'auth'}
         onPress={async (): Promise<void> => {
@@ -567,6 +640,25 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingTop: 80,
     paddingBottom: 100,
+  },
+  grantAuthTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    paddingHorizontal: 16,
+    textAlign: 'center',
+  },
+  grantAuthStatus: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    textAlign: 'center',
+  },
+  grantAuthUrlLabel: {
+    fontWeight: '600',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+  },
+  grantAuthUrl: {
+    padding: 16,
   },
   box: {
     width: 60,
