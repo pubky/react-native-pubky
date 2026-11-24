@@ -454,6 +454,63 @@ class PubkyModule(reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
+    fun resolveDnsRecords(publicKey: String, knownPacket: String?, promise: Promise) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val result = resolveDnsRecords(publicKey, knownPacket)
+                val array = Arguments.createArray().apply {
+                    result.forEach { pushString(it) }
+                }
+                withContext(Dispatchers.Main) {
+                    promise.resolve(array)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    promise.reject("Error", e.message)
+                }
+            }
+        }
+    }
+
+    @ReactMethod
+    fun editDnsRecords(secretKey: String, changesJson: String, knownPacket: String?, promise: Promise) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val result = editDnsRecords(secretKey, changesJson, knownPacket)
+                val array = Arguments.createArray().apply {
+                    result.forEach { pushString(it) }
+                }
+                withContext(Dispatchers.Main) {
+                    promise.resolve(array)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    promise.reject("Error", e.message)
+                }
+            }
+        }
+    }
+
+    @ReactMethod
+    fun republishPacket(publicKey: String, knownPacket: String?, promise: Promise) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val result = republishPacket(publicKey, knownPacket)
+                val array = Arguments.createArray().apply {
+                    result.forEach { pushString(it) }
+                }
+                withContext(Dispatchers.Main) {
+                    promise.resolve(array)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    promise.reject("Error", e.message)
+                }
+            }
+        }
+    }
+
+    @ReactMethod
     fun listGrants(sessionSecret: String, promise: Promise) {
         CoroutineScope(Dispatchers.IO).launch {
             try {

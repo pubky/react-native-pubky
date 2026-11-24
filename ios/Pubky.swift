@@ -236,6 +236,42 @@ class Pubky: RCTEventEmitter {
         }
     }
 
+    @objc(resolveDnsRecords:knownPacket:withResolver:withRejecter:)
+    func resolveDnsRecords(_ publicKey: String, knownPacket: String?, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        Task {
+            do {
+                let result = try await react_native_pubky.resolveDnsRecords(publicKey: publicKey, knownPacket: knownPacket)
+                resolve(result)
+            } catch {
+                reject("resolveDnsRecords Error", "Failed to resolve DNS records", error)
+            }
+        }
+    }
+
+    @objc(editDnsRecords:changesJson:knownPacket:withResolver:withRejecter:)
+    func editDnsRecords(_ secretKey: String, changesJson: String, knownPacket: String?, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        Task {
+            do {
+                let result = try await react_native_pubky.editDnsRecords(secretKey: secretKey, changesJson: changesJson, knownPacket: knownPacket)
+                resolve(result)
+            } catch {
+                reject("editDnsRecords Error", "Failed to edit DNS records", error)
+            }
+        }
+    }
+
+    @objc(republishPacket:knownPacket:withResolver:withRejecter:)
+    func republishPacket(_ publicKey: String, knownPacket: String?, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        Task {
+            do {
+                let result = try await react_native_pubky.republishPacket(publicKey: publicKey, knownPacket: knownPacket)
+                resolve(result)
+            } catch {
+                reject("republishPacket Error", "Failed to republish packet", error)
+            }
+        }
+    }
+
     @objc(listGrants:withResolver:withRejecter:)
     func listGrants(_ sessionSecret: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
         Task {

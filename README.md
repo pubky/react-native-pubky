@@ -19,6 +19,8 @@ npm install @synonymdev/react-native-pubky
 - [x] [resolve](#resolve): Functionality to resolve content.
 - [x] [publishHttps](#publishHttps): Publish HTTPS records.
 - [x] [resolveHttps](#resolveHttps): Resolve HTTPS records.
+- [x] [resolveDnsRecords](#resolveDnsRecords) / [editDnsRecords](#editDnsRecords): List, add and remove A, AAAA, CNAME, MX and TXT records without dropping the homeserver record.
+- [x] [republishPacket](#republishPacket): Re-announce a key's current packet so its records do not expire.
 - [x] [getSignupToken](#getSignupToken): Get a signup token from a homeserver with admin credentials.
 - [x] [signUp](#signUp): Grant sign-up to a homeserver and update Pkarr accordingly, with optional signup token support.
 - [x] signUpGrant / signUpCookie: Explicit Grant and legacy cookie sign-up methods.
@@ -427,6 +429,62 @@ if (signOutRes.isErr()) {
   return;
 }
 console.log(signOutRes.value);
+```
+
+### <a name="resolveDnsRecords"></a>resolveDnsRecords
+
+List the A, AAAA, CNAME, MX and TXT records a key publishes. Names are relative to the key: `@` is the key itself and `*` a wildcard. Other records, such as the `_pubky` homeserver record, are counted in `other_records`. Store `signed_packet` and pass it back as `knownPacket` to every DNS call.
+
+```js
+import { resolveDnsRecords } from '@synonymdev/react-native-pubky';
+
+const recordsRes = await resolveDnsRecords(
+  'z32PublicKey', // public key
+  storedPacket // optional signed_packet from an earlier call
+);
+if (recordsRes.isErr()) {
+  console.log(recordsRes.error.message);
+  return;
+}
+console.log(recordsRes.value.records);
+// [{ name: '@', type: 'A', ttl: 300, value: '192.0.2.1' }]
+```
+
+### <a name="editDnsRecords"></a>editDnsRecords
+
+Add and remove records, then publish. Every other record in the packet, including the homeserver record, is kept. The edit is refused when the network cannot be read, and re-applied if a newer packet appears while publishing. Errors start with a `PKDNS_*` code, such as `PKDNS_PACKET_TOO_LARGE` (a packet holds 1000 bytes) or `PKDNS_CNAME_CONFLICT`.
+
+```js
+import { editDnsRecords } from '@synonymdev/react-native-pubky';
+
+const editRes = await editDnsRecords(
+  'secretKey',
+  {
+    add: [{ name: 'mail', type: 'MX', ttl: 3600, value: 'mx.example.com', priority: 10 }],
+    remove: [{ name: '@', type: 'A', ttl: 300, value: '192.0.2.1' }],
+  },
+  storedPacket
+);
+if (editRes.isErr()) {
+  console.log(editRes.error.message);
+  return;
+}
+console.log(editRes.value.records);
+```
+
+### <a name="republishPacket"></a>republishPacket
+
+Re-announce a key's current signed packet to the DHT without changing it. DHT nodes drop data after a while, so call this periodically for keys whose records must stay reachable. It needs no secret key and cannot overwrite a newer packet.
+
+```js
+import { republishPacket } from '@synonymdev/react-native-pubky';
+
+const republishRes = await republishPacket('z32PublicKey', storedPacket);
+if (republishRes.isErr()) {
+  console.log(republishRes.error.message);
+  return;
+}
+console.log(republishRes.value.republished);
 ```
 
 ### <a name="listGrants"></a>listGrants

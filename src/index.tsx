@@ -346,6 +346,119 @@ export async function resolve(publicKey: string): Promise<Result<IDNSPacket>> {
   }
 }
 
+export type DnsRecordType = 'A' | 'AAAA' | 'CNAME' | 'MX' | 'TXT';
+
+/**
+ * A DNS record in a key's pkarr packet. `name` is relative to the key: `@` is
+ * the key itself, `*` a wildcard and `www` is `www.<key>`. `priority` is set
+ * for MX records only.
+ */
+export interface DnsRecord {
+  name: string;
+  type: DnsRecordType;
+  ttl: number;
+  value: string;
+  priority?: number;
+}
+
+export interface DnsRecordsResult {
+  public_key: string;
+  /** False when no packet exists for the key yet. */
+  found: boolean;
+  /** Packet timestamp in microseconds, or null when not found. */
+  timestamp: number | null;
+  /** Hex of the signed packet. Store it and pass it back as `knownPacket`. */
+  signed_packet: string | null;
+  /** Encoded size in bytes; a packet holds at most 1000. */
+  packet_size: number;
+  records: DnsRecord[];
+  /** Records kept but not listed, such as the `_pubky` homeserver record. */
+  other_records: number;
+}
+
+export interface DnsRecordChanges {
+  add?: DnsRecord[];
+  remove?: DnsRecord[];
+}
+
+export interface RepublishPacketResult extends DnsRecordsResult {
+  /** False when there was nothing to republish or the network had newer. */
+  republished: boolean;
+}
+
+/**
+ * Lists a key's A, AAAA, CNAME, MX and TXT records. Other records, such as
+ * the `_pubky` homeserver record, are counted in `other_records` and are never
+ * dropped by `editDnsRecords`.
+ */
+export async function resolveDnsRecords(
+  publicKey: string,
+  knownPacket?: string
+): Promise<Result<DnsRecordsResult>> {
+  try {
+    const res = await Pubky.resolveDnsRecords(
+      publicKey,
+      optionalString(knownPacket)
+    );
+    const errorMessage = nativeResultError(res);
+    if (errorMessage) {
+      return err(errorMessage);
+    }
+    return ok(JSON.parse(res[1]));
+  } catch (e) {
+    return err(nativeErrorMessage(e));
+  }
+}
+
+/**
+ * Adds and removes DNS records and publishes the packet, keeping every other
+ * record. Refused when the network cannot be read. Errors start with a
+ * `PKDNS_*` code, e.g. `PKDNS_PACKET_TOO_LARGE`.
+ */
+export async function editDnsRecords(
+  secretKey: string,
+  changes: DnsRecordChanges,
+  knownPacket?: string
+): Promise<Result<DnsRecordsResult>> {
+  try {
+    const res = await Pubky.editDnsRecords(
+      secretKey,
+      JSON.stringify(changes),
+      optionalString(knownPacket)
+    );
+    const errorMessage = nativeResultError(res);
+    if (errorMessage) {
+      return err(errorMessage);
+    }
+    return ok(JSON.parse(res[1]));
+  } catch (e) {
+    return err(nativeErrorMessage(e));
+  }
+}
+
+/**
+ * Re-announces a key's current signed packet unchanged so its records do not
+ * expire from the DHT. Needs no secret key and cannot overwrite newer edits.
+ */
+export async function republishPacket(
+  publicKey: string,
+  knownPacket?: string
+): Promise<Result<RepublishPacketResult>> {
+  try {
+    const res = await Pubky.republishPacket(
+      publicKey,
+      optionalString(knownPacket)
+    );
+    const errorMessage = nativeResultError(res);
+    if (errorMessage) {
+      return err(errorMessage);
+    }
+    return ok(JSON.parse(res[1]));
+  } catch (e) {
+    return err(nativeErrorMessage(e));
+  }
+}
+
 /*
 Returns the signupToken used in signUp
  */

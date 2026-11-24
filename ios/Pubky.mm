@@ -96,6 +96,22 @@ RCT_EXTERN_METHOD(revalidateSession:(NSString *)sessionSecret
                   withResolver:(RCTPromiseResolveBlock)resolve
                   withRejecter:(RCTPromiseRejectBlock)reject)
 
+RCT_EXTERN_METHOD(resolveDnsRecords:(NSString *)publicKey
+                  knownPacket:(NSString *)knownPacket
+                  withResolver:(RCTPromiseResolveBlock)resolve
+                  withRejecter:(RCTPromiseRejectBlock)reject)
+
+RCT_EXTERN_METHOD(editDnsRecords:(NSString *)secretKey
+                  changesJson:(NSString *)changesJson
+                  knownPacket:(NSString *)knownPacket
+                  withResolver:(RCTPromiseResolveBlock)resolve
+                  withRejecter:(RCTPromiseRejectBlock)reject)
+
+RCT_EXTERN_METHOD(republishPacket:(NSString *)publicKey
+                  knownPacket:(NSString *)knownPacket
+                  withResolver:(RCTPromiseResolveBlock)resolve
+                  withRejecter:(RCTPromiseRejectBlock)reject)
+
 RCT_EXTERN_METHOD(listGrants:(NSString *)sessionSecret
                   withResolver:(RCTPromiseResolveBlock)resolve
                   withRejecter:(RCTPromiseRejectBlock)reject)
