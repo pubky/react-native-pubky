@@ -433,6 +433,8 @@ internal interface _UniFFILib : Library {
     ): RustBuffer.ByValue
     fun uniffi_pubkycore_fn_func_derive_grant_encryption_key(`sessionSecret`: RustBuffer.ByValue,`path`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
+    fun uniffi_pubkycore_fn_func_edit_dns_records(`secretKey`: RustBuffer.ByValue,`changesJson`: RustBuffer.ByValue,`knownPacket`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
+    ): RustBuffer.ByValue
     fun uniffi_pubkycore_fn_func_generate_mnemonic_phrase(_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_pubkycore_fn_func_generate_mnemonic_phrase_and_keypair(_uniffi_out_err: RustCallStatus, 
@@ -483,7 +485,11 @@ internal interface _UniFFILib : Library {
     ): Unit
     fun uniffi_pubkycore_fn_func_republish_homeserver(`secretKey`: RustBuffer.ByValue,`homeserver`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
+    fun uniffi_pubkycore_fn_func_republish_packet(`publicKey`: RustBuffer.ByValue,`knownPacket`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
+    ): RustBuffer.ByValue
     fun uniffi_pubkycore_fn_func_resolve(`publicKey`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
+    ): RustBuffer.ByValue
+    fun uniffi_pubkycore_fn_func_resolve_dns_records(`publicKey`: RustBuffer.ByValue,`knownPacket`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_pubkycore_fn_func_resolve_https(`publicKey`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
@@ -691,6 +697,8 @@ internal interface _UniFFILib : Library {
     ): Short
     fun uniffi_pubkycore_checksum_func_derive_grant_encryption_key(
     ): Short
+    fun uniffi_pubkycore_checksum_func_edit_dns_records(
+    ): Short
     fun uniffi_pubkycore_checksum_func_generate_mnemonic_phrase(
     ): Short
     fun uniffi_pubkycore_checksum_func_generate_mnemonic_phrase_and_keypair(
@@ -741,7 +749,11 @@ internal interface _UniFFILib : Library {
     ): Short
     fun uniffi_pubkycore_checksum_func_republish_homeserver(
     ): Short
+    fun uniffi_pubkycore_checksum_func_republish_packet(
+    ): Short
     fun uniffi_pubkycore_checksum_func_resolve(
+    ): Short
+    fun uniffi_pubkycore_checksum_func_resolve_dns_records(
     ): Short
     fun uniffi_pubkycore_checksum_func_resolve_https(
     ): Short
@@ -884,6 +896,9 @@ private fun uniffiCheckApiChecksums(lib: _UniFFILib) {
     if (lib.uniffi_pubkycore_checksum_func_derive_grant_encryption_key() != 48351.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_pubkycore_checksum_func_edit_dns_records() != 23380.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_pubkycore_checksum_func_generate_mnemonic_phrase() != 2358.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -959,7 +974,13 @@ private fun uniffiCheckApiChecksums(lib: _UniFFILib) {
     if (lib.uniffi_pubkycore_checksum_func_republish_homeserver() != 63919.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_pubkycore_checksum_func_republish_packet() != 34070.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_pubkycore_checksum_func_resolve() != 34317.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_pubkycore_checksum_func_resolve_dns_records() != 53210.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_pubkycore_checksum_func_resolve_https() != 17266.toShort()) {
@@ -3049,6 +3070,14 @@ fun `deriveGrantEncryptionKey`(`sessionSecret`: String, `path`: String): ByteArr
 }
 
 
+fun `editDnsRecords`(`secretKey`: String, `changesJson`: String, `knownPacket`: String?): List<String> {
+    return FfiConverterSequenceString.lift(
+    rustCall() { _status ->
+    _UniFFILib.INSTANCE.uniffi_pubkycore_fn_func_edit_dns_records(FfiConverterString.lower(`secretKey`),FfiConverterString.lower(`changesJson`),FfiConverterOptionalString.lower(`knownPacket`),_status)
+})
+}
+
+
 fun `generateMnemonicPhrase`(): List<String> {
     return FfiConverterSequenceString.lift(
     rustCall() { _status ->
@@ -3256,10 +3285,26 @@ fun `republishHomeserver`(`secretKey`: String, `homeserver`: String): List<Strin
 }
 
 
+fun `republishPacket`(`publicKey`: String, `knownPacket`: String?): List<String> {
+    return FfiConverterSequenceString.lift(
+    rustCall() { _status ->
+    _UniFFILib.INSTANCE.uniffi_pubkycore_fn_func_republish_packet(FfiConverterString.lower(`publicKey`),FfiConverterOptionalString.lower(`knownPacket`),_status)
+})
+}
+
+
 fun `resolve`(`publicKey`: String): List<String> {
     return FfiConverterSequenceString.lift(
     rustCall() { _status ->
     _UniFFILib.INSTANCE.uniffi_pubkycore_fn_func_resolve(FfiConverterString.lower(`publicKey`),_status)
+})
+}
+
+
+fun `resolveDnsRecords`(`publicKey`: String, `knownPacket`: String?): List<String> {
+    return FfiConverterSequenceString.lift(
+    rustCall() { _status ->
+    _UniFFILib.INSTANCE.uniffi_pubkycore_fn_func_resolve_dns_records(FfiConverterString.lower(`publicKey`),FfiConverterOptionalString.lower(`knownPacket`),_status)
 })
 }
 
