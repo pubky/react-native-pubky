@@ -2322,6 +2322,18 @@ public func deriveGrantEncryptionKey(sessionSecret: String, path: String) throws
     )
 }
 
+public func editDnsRecords(secretKey: String, changesJson: String, knownPacket: String?) -> [String] {
+    return try! FfiConverterSequenceString.lift(
+        try! rustCall {
+            uniffi_pubkycore_fn_func_edit_dns_records(
+                FfiConverterString.lower(secretKey),
+                FfiConverterString.lower(changesJson),
+                FfiConverterOptionString.lower(knownPacket), $0
+            )
+        }
+    )
+}
+
 public func generateMnemonicPhrase() -> [String] {
     return try! FfiConverterSequenceString.lift(
         try! rustCall {
@@ -2572,11 +2584,33 @@ public func republishHomeserver(secretKey: String, homeserver: String) -> [Strin
     )
 }
 
+public func republishPacket(publicKey: String, knownPacket: String?) -> [String] {
+    return try! FfiConverterSequenceString.lift(
+        try! rustCall {
+            uniffi_pubkycore_fn_func_republish_packet(
+                FfiConverterString.lower(publicKey),
+                FfiConverterOptionString.lower(knownPacket), $0
+            )
+        }
+    )
+}
+
 public func resolve(publicKey: String) -> [String] {
     return try! FfiConverterSequenceString.lift(
         try! rustCall {
             uniffi_pubkycore_fn_func_resolve(
                 FfiConverterString.lower(publicKey), $0
+            )
+        }
+    )
+}
+
+public func resolveDnsRecords(publicKey: String, knownPacket: String?) -> [String] {
+    return try! FfiConverterSequenceString.lift(
+        try! rustCall {
+            uniffi_pubkycore_fn_func_resolve_dns_records(
+                FfiConverterString.lower(publicKey),
+                FfiConverterOptionString.lower(knownPacket), $0
             )
         }
     )
@@ -2976,6 +3010,9 @@ private var initializationResult: InitializationResult {
     if uniffi_pubkycore_checksum_func_derive_grant_encryption_key() != 48351 {
         return InitializationResult.apiChecksumMismatch
     }
+    if uniffi_pubkycore_checksum_func_edit_dns_records() != 23380 {
+        return InitializationResult.apiChecksumMismatch
+    }
     if uniffi_pubkycore_checksum_func_generate_mnemonic_phrase() != 2358 {
         return InitializationResult.apiChecksumMismatch
     }
@@ -3051,7 +3088,13 @@ private var initializationResult: InitializationResult {
     if uniffi_pubkycore_checksum_func_republish_homeserver() != 63919 {
         return InitializationResult.apiChecksumMismatch
     }
+    if uniffi_pubkycore_checksum_func_republish_packet() != 34070 {
+        return InitializationResult.apiChecksumMismatch
+    }
     if uniffi_pubkycore_checksum_func_resolve() != 34317 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_pubkycore_checksum_func_resolve_dns_records() != 53210 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_pubkycore_checksum_func_resolve_https() != 17266 {
