@@ -114,6 +114,8 @@ RustBuffer uniffi_pubkycore_fn_func_delete_with_session(RustBuffer url, RustBuff
 );
 RustBuffer uniffi_pubkycore_fn_func_derive_grant_encryption_key(RustBuffer session_secret, RustBuffer path, RustCallStatus *_Nonnull out_status
 );
+RustBuffer uniffi_pubkycore_fn_func_edit_dns_records(RustBuffer secret_key, RustBuffer changes_json, RustBuffer known_packet, RustCallStatus *_Nonnull out_status
+);
 RustBuffer uniffi_pubkycore_fn_func_generate_mnemonic_phrase(RustCallStatus *_Nonnull out_status
     
 );
@@ -169,7 +171,11 @@ void uniffi_pubkycore_fn_func_remove_event_listener(RustCallStatus *_Nonnull out
 );
 RustBuffer uniffi_pubkycore_fn_func_republish_homeserver(RustBuffer secret_key, RustBuffer homeserver, RustCallStatus *_Nonnull out_status
 );
+RustBuffer uniffi_pubkycore_fn_func_republish_packet(RustBuffer public_key, RustBuffer known_packet, RustCallStatus *_Nonnull out_status
+);
 RustBuffer uniffi_pubkycore_fn_func_resolve(RustBuffer public_key, RustCallStatus *_Nonnull out_status
+);
+RustBuffer uniffi_pubkycore_fn_func_resolve_dns_records(RustBuffer public_key, RustBuffer known_packet, RustCallStatus *_Nonnull out_status
 );
 RustBuffer uniffi_pubkycore_fn_func_resolve_https(RustBuffer public_key, RustCallStatus *_Nonnull out_status
 );
@@ -393,6 +399,9 @@ uint16_t uniffi_pubkycore_checksum_func_delete_with_session(void
 uint16_t uniffi_pubkycore_checksum_func_derive_grant_encryption_key(void
     
 );
+uint16_t uniffi_pubkycore_checksum_func_edit_dns_records(void
+    
+);
 uint16_t uniffi_pubkycore_checksum_func_generate_mnemonic_phrase(void
     
 );
@@ -468,7 +477,13 @@ uint16_t uniffi_pubkycore_checksum_func_remove_event_listener(void
 uint16_t uniffi_pubkycore_checksum_func_republish_homeserver(void
     
 );
+uint16_t uniffi_pubkycore_checksum_func_republish_packet(void
+    
+);
 uint16_t uniffi_pubkycore_checksum_func_resolve(void
+    
+);
+uint16_t uniffi_pubkycore_checksum_func_resolve_dns_records(void
     
 );
 uint16_t uniffi_pubkycore_checksum_func_resolve_https(void
